@@ -1,0 +1,33 @@
+using System;
+using UnityEngine;
+
+public class EventManager : MonoBehaviour
+{
+    public static event Action<int> OnMoveChanged; //When move count changes
+
+    public static event Action<CubeController> OnCubeCleared; //When cube destroyed 
+
+    public static event Action OnLevelFailed; //When game is over
+
+    public static event Action OnLevelCompleted; //When level is completed
+
+    public static void RaiseMoveChanged(int newMoves)
+    {
+        OnMoveChanged?.Invoke(newMoves);
+    }
+
+    public static void RaiseCubeCleared(CubeController cube)
+    {
+        OnCubeCleared?.Invoke(cube);
+    }   
+
+    public static void RaiseLevelFail()
+    {
+        OnLevelFailed?.Invoke();
+    }
+
+    public static void RaiseLevelComplete()
+    {
+        OnLevelCompleted?.Invoke();
+    }
+}
