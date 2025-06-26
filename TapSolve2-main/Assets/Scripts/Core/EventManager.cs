@@ -7,7 +7,7 @@ public class EventManager : MonoBehaviour
 
     public static event Action<CubeController> OnCubeCleared; //When cube destroyed 
 
-    public static event Action OnLevelFailed; //When game is over
+    public static event Action OnLevelFail; //When game is over
 
     public static event Action OnLevelCompleted; //When level is completed
 
@@ -23,7 +23,7 @@ public class EventManager : MonoBehaviour
 
     public static void RaiseLevelFail()
     {
-        OnLevelFailed?.Invoke();
+        OnLevelFail?.Invoke();
     }
 
     public static void RaiseLevelComplete()

@@ -1,15 +1,9 @@
-using System;
+// Assets/Scripts/Core/CubeData.cs
 using UnityEngine;
 
-[Serializable]
-public class CubeData : MonoBehaviour
+[System.Serializable]
+public class CubeData
 {
     public Direction Direction;
     public Color Color;
-
-    public CubeData(Direction direction, Color color)
-    {
-        this.Direction = direction;
-        this.Color = color;
-    }
 }

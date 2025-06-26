@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
-
+using DG.Tweening;
 public class CubeController : MonoBehaviour, IClickable
 {
     [SerializeField] private MeshRenderer _meshRenderer;
@@ -9,7 +9,7 @@ public class CubeController : MonoBehaviour, IClickable
     [SerializeField] private float _moveDistance = 1f;
     [SerializeField] private float _moveSpeed = 5f;
 
-    private CubeData _cubeData;
+    [SerializeField] private CubeData _cubeData;
     private bool _isMoving;
 
     public void Initialize(CubeData cubeData)
@@ -27,20 +27,47 @@ public class CubeController : MonoBehaviour, IClickable
         }
         GameManager.Instance.UseMove();
         
-        Vector3 dir = direc
+        Vector3 dir = DirectionToVector(_cubeData.Direction);
+        Vector3 targetPosition = transform.position + dir * _moveDistance;
+
+        MoveToPosition(targetPosition);
+        GameManager.Instance.UseMove();
     }
 
-    private IEnumerator MoveToPosition(Vector3 target)
+    private Vector3 DirectionToVector(Direction direction)
     {
-        _isMoving = true;
-        while (Vector3.Distance(transform.position, target) > 0.01f)
+        switch (direction)
         {
-            transform.position = Vector3.Lerp(startPosition, target, elapsedTime / _moveSpeed);
-            elapsedTime += Time.deltaTime;
-            yield return null;
+            case Direction.Up:
+                return Vector3.back;
+            case Direction.Down:
+                return Vector3.forward;
+            case Direction.Left:
+                return Vector3.right;
+            case Direction.Right:
+                return Vector3.left;
+            default:
+                return Vector3.zero;
         }
+    }
+
+    private void MoveToPosition(Vector3 target)
+    {
+        transform.DOMove(target, _moveSpeed)
+            .SetEase(Ease.Linear)
+            .OnStart(() => _isMoving = true)
+            .OnComplete(() =>
+            {
+                transform.position = target;
+                _isMoving = false;
+                EventManager.RaiseCubeCleared(this);
+            });
+
         transform.position = target;
         _isMoving = false;
+        
+        EventManager.RaiseCubeCleared(this);
+    }
     private Quaternion GetRotationForDirection(Direction direction)
     {
         switch (direction)
@@ -56,6 +83,8 @@ public class CubeController : MonoBehaviour, IClickable
 
             case Direction.Right:
                 return Quaternion.Euler(0, 90, 0);
+            default:
+                return Quaternion.identity;
         }
     }
 
