@@ -2,8 +2,7 @@ using UnityEngine;
 
 public class CubeSpawner : MonoBehaviour
 {
-    [SerializeField] private GameObject cubePrefab;
-
+    //[SerializeField] private GameObject cubePrefab;
     private void Start()
     {
         SpawnGrid();
@@ -11,9 +10,9 @@ public class CubeSpawner : MonoBehaviour
 
     private void SpawnGrid()
     {
-        for (int x = 0; x < 5; x++)
+        for (int x = 0; x < GridManager.Instance.Columns; x++)
         {
-            for (int y = 0; y < 5; y++)
+            for (int y = 0; y < GridManager.Instance.Rows; y++)
             {
                 // Rastgele yön seç
                 Direction direction = (Direction)Random.Range(0, 4);
@@ -21,20 +20,21 @@ public class CubeSpawner : MonoBehaviour
                 // Renk belirle
                 Color color = GetColorForDirection(direction);
 
-                // Pozisyonu hesapla
-                Vector3 pos = GridManager.Instance.GetWorldPosition(new Vector2Int(x, y));
 
-                // Küpü oluþtur
-                GameObject cubeObj = Instantiate(cubePrefab, pos, Quaternion.identity);
-
-                // CubeController'a CubeData ver
-                CubeController controller = cubeObj.GetComponent<CubeController>();
                 CubeData data = new CubeData
                 {
                     Direction = direction,
                     Color = color
                 };
-                controller.Initialize(data);
+
+                // Pozisyonu hesapla
+                Vector3 pos = GridManager.Instance.GetWorldPosition(new Vector2Int(x, y));
+
+                CubeFactory.Instance.SpawnCube(data, pos);
+                //Debug.Log(x);
+                //Debug.Log(y);
+                //Debug.Log("***********");
+
             }
         }
     }

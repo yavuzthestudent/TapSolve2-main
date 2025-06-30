@@ -4,13 +4,18 @@ public class GridManager : MonoBehaviour
 {
     public static GridManager Instance { get; private set; }
 
-    [SerializeField] private int _rows = 5;
-    [SerializeField] private int _columns = 5;
+    [Header("Grid Settings")]
+    [field: SerializeField] public int Rows { get; private set; }
+    [field: SerializeField] public int Columns { get; private set; }
     [SerializeField] private float _cellSize = 1.5f;
-    [SerializeField] Vector3 _origin = Vector3.zero;
+    [SerializeField] private Vector3 _origin;
 
     private void Awake()
     {
+        float xOrigin = -((Columns - 1) / 2f);
+        _origin = new Vector3(xOrigin, -3f, 17f);
+        
+
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -26,7 +31,7 @@ public class GridManager : MonoBehaviour
     public Vector3 GetWorldPosition(Vector2Int gridPosition)
     {
         float x = _origin.x + gridPosition.x * _cellSize;
-        float z = _origin.z + gridPosition.y * _cellSize;
-        return new Vector3(x, _origin.y, z);
+        float y = _origin.y + gridPosition.y * _cellSize;
+        return new Vector3(x, y, _origin.z);
     }
 }
