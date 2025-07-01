@@ -2,13 +2,7 @@ using UnityEngine;
 
 public class CubeSpawner : MonoBehaviour
 {
-    //[SerializeField] private GameObject cubePrefab;
-    private void Start()
-    {
-        SpawnGrid();
-    }
-
-    private void SpawnGrid()
+    public void SpawnGrid()
     {
         for (int x = 0; x < GridManager.Instance.Columns; x++)
         {

@@ -16,6 +16,8 @@ public class CubePool
             defaultCapacity: initialSize,
             maxSize: initialSize * 2
         );
+
+        //WarmUp(initialSize); Baþlangýçta doldurmak için 
     }
 
     public GameObject Get() => _pool.Get();

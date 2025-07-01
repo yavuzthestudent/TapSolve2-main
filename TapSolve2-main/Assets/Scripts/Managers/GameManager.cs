@@ -4,9 +4,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [SerializeField] private int _moveLimit = 20;
-
-    public int MovesLimit { get; private set; }
+    [field: SerializeField] public int MovesLimit { get; set; }
 
     private void Awake()
     {
@@ -24,20 +22,25 @@ public class GameManager : MonoBehaviour
         InitializeGame();
     }
 
+    public void SetMoveLimit(int limit)
+    {
+        MovesLimit = limit;
+    }
+
     public void InitializeGame()
     {
-        MovesLimit = _moveLimit;
         EventManager.RaiseMoveChanged(MovesLimit);
     }
 
     public void UseMove()
     {
-        if (_moveLimit <= 0)
+        if (MovesLimit <= 0)
         {
             EventManager.RaiseLevelFail();
             return;
         }
-        _moveLimit--;
-        EventManager.RaiseMoveChanged(_moveLimit);
+        // Hamle sayýsýný azalt
+        MovesLimit--;
+        EventManager.RaiseMoveChanged(MovesLimit);
     }
 }

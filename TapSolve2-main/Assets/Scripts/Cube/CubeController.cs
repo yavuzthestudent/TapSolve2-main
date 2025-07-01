@@ -25,12 +25,13 @@ public class CubeController : MonoBehaviour, IClickable
         _cubeData = data;
         _meshRenderer.material.color = data.Color;
         _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
+        dir = DirectionToVector(_cubeData.Direction);
+
     }
 
     private void Start()
     {
         origin = transform.position;
-        dir = DirectionToVector(_cubeData.Direction);
     }
 
     public void OnClick()
@@ -125,7 +126,11 @@ public class CubeController : MonoBehaviour, IClickable
             .DOColor(otherCubesColor, _flashDuration)
             .SetEase(Ease.InOutQuad));
     }
-
+    public void ResetState()
+    {
+        _isMoving = false;
+        _moveTween?.Kill(); // Önceki tween'i iptal et
+    }
     private Quaternion GetRotationForDirection(Direction direction)
     {
         switch (direction)
