@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: 1_level
   m_EditorClassIdentifier: 
   levelNumber: 1
-  moveLimit: 5
-  rows: 3
-  columns: 1
+  moveLimit: 25
+  rows: 6
+  columns: 3

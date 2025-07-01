@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour
     {
         if (MovesLimit <= 0)
         {
+            Debug.Log("Hamle sayýsý bitti!");
             EventManager.RaiseLevelFail();
             return;
         }

@@ -11,7 +11,7 @@ public class LevelManager : MonoBehaviour
     private int _currentLevelIndex = 0;
     private int _remainingCubes;
 
-    private CubeSpawner _cubeSpawner;
+    private SmartCubeSpawner _cubeSpawner;
     private UIManager _uiManager;
 
     private void Awake()
@@ -27,7 +27,7 @@ public class LevelManager : MonoBehaviour
 
     private void Start()
     {
-        _cubeSpawner = FindFirstObjectByType<CubeSpawner>(); // Updated method  
+        _cubeSpawner = FindFirstObjectByType<SmartCubeSpawner>(); // Updated method  
         //_uiManager = FindFirstObjectByType<UIManager>(); // Updated method  
 
         LoadLevel(_currentLevelIndex);

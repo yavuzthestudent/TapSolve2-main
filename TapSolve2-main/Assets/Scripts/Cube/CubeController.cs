@@ -13,6 +13,8 @@ public class CubeController : MonoBehaviour, IClickable
 
     private CubeData _cubeData;
     private Tween _moveTween;
+    private Sequence _flashSequence;
+    private Color _originalColor;
 
     private bool _isMoving;
     private bool _canMove;
@@ -32,6 +34,8 @@ public class CubeController : MonoBehaviour, IClickable
     private void Start()
     {
         origin = transform.position;
+        _originalColor = _meshRenderer.material.color; // Kendi rengimizi de kaydedelim
+
     }
 
     public void OnClick()
@@ -105,27 +109,43 @@ public class CubeController : MonoBehaviour, IClickable
 
     private void FlashRed(MeshRenderer otherCubeRenderer)
     {
-        Color otherCubesColor = otherCubeRenderer.material.color;
-        Color thisOriginalColor = _meshRenderer.material.color; // Kendi rengimizi de kaydedelim
+        if(_flashSequence != null && _flashSequence.IsActive())
+        {
+            _flashSequence.Kill(); // Önceki flash'ı iptal et
 
-        Sequence sequence = DOTween.Sequence();
+            _meshRenderer.material.color = _originalColor; // Orijinal renge dön
+
+            var otherColor = otherCubeRenderer.GetComponent<CubeController>();
+            if (otherColor != null)
+            {
+                otherColor._meshRenderer.material.color = otherColor._originalColor; // Diğer küpün orijinal rengine dön
+            }
+        }
+
+        Color otherCubesColor = otherCubeRenderer.material.color;
+        var otherController = otherCubeRenderer.GetComponent<CubeController>();
+        if (otherController != null)
+        {
+            otherCubesColor = otherController._originalColor; // Diğer küpün orijinal rengini al
+        }
 
         //Çarpışan küpleri kırmızıya flash yap
-        sequence.Append(_meshRenderer.material
-            .DOColor(Color.red, _flashDuration)
-            .SetEase(Ease.InOutQuad));
-        sequence.Join(otherCubeRenderer.material // Join() ile aynı anda başlat
-            .DOColor(Color.red, _flashDuration)
-            .SetEase(Ease.InOutQuad));
+        _flashSequence = DOTween.Sequence()
+                    .Append(_meshRenderer.material
+                        .DOColor(Color.red, _flashDuration)
+                        .SetEase(Ease.InOutQuad))
+                    .Join(otherCubeRenderer.material
+                        .DOColor(Color.red, _flashDuration)
+                        .SetEase(Ease.InOutQuad))
 
-        // Ardından orijinal renge geri dön
-        sequence.Append(_meshRenderer.material
-            .DOColor(thisOriginalColor, _flashDuration)
-            .SetEase(Ease.InOutQuad));
-        sequence.Join(otherCubeRenderer.material
-            .DOColor(otherCubesColor, _flashDuration)
-            .SetEase(Ease.InOutQuad));
-    }
+                    .Append(_meshRenderer.material
+                        .DOColor(_originalColor, _flashDuration)
+                        .SetEase(Ease.InOutQuad))
+                    .Join(otherCubeRenderer.material
+                        .DOColor(otherCubesColor, _flashDuration)
+                        .SetEase(Ease.InOutQuad));
+    
+}
     public void ResetState()
     {
         _isMoving = false;

@@ -145,8 +145,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _meshRenderer: {fileID: 3151315703160217870}
   _arrowTransform: {fileID: 2687183296066565672}
-  _moveDistance: 10
+  _moveDistance: 15
   _moveSpeed: 2
+  _flashDuration: 0.15
   _obstacleLayer:
     serializedVersion: 2
     m_Bits: 256
