@@ -4,7 +4,7 @@ public class CubeFactory : MonoBehaviour
 {
     public static CubeFactory Instance { get; private set; }
     [SerializeField] private GameObject _cubePrefab;
-    [SerializeField] private int _initialSize = 20;
+    [SerializeField] private int _initialSize = 30;
     private CubePool _cubePool;
 
     private void Awake()

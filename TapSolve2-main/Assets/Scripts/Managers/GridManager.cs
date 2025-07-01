@@ -7,8 +7,8 @@ public class GridManager : MonoBehaviour
     [Header("Grid Settings")]
     [field: SerializeField] public int Rows { get; private set; }
     [field: SerializeField] public int Columns { get; private set; }
-    [SerializeField] private float _cellSize = 1.5f;
-    [SerializeField] private Vector3 _origin;
+    [SerializeField] private float _cellSize = 1;
+    [SerializeField] private Vector3 _origin = Vector3.zero;
 
     private void Awake()
     {

@@ -31,10 +31,6 @@ public class CubeSpawner : MonoBehaviour
                 Vector3 pos = GridManager.Instance.GetWorldPosition(new Vector2Int(x, y));
 
                 CubeFactory.Instance.SpawnCube(data, pos);
-                //Debug.Log(x);
-                //Debug.Log(y);
-                //Debug.Log("***********");
-
             }
         }
     }
@@ -44,7 +40,7 @@ public class CubeSpawner : MonoBehaviour
         switch (dir)
         {
             case Direction.Up: return Color.blue;
-            case Direction.Down: return Color.red;
+            case Direction.Down: return Color.black;
             case Direction.Right: return Color.grey;
             case Direction.Left: return Color.green;
             default: return Color.white;
