@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelNumber: 2
   moveLimit: 36
-  rows: 7
-  columns: 4
+  rows: 5
+  columns: 3

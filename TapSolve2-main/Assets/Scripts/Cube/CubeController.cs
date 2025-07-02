@@ -19,7 +19,6 @@ public class CubeController : MonoBehaviour, IClickable
     private bool _isMoving;
     private bool _canMove;
 
-    private Vector3 origin;
     private Vector3 dir;
 
     public void Initialize(CubeData data)
@@ -29,13 +28,12 @@ public class CubeController : MonoBehaviour, IClickable
         _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
         dir = DirectionToVector(_cubeData.Direction);
 
+        _originalColor = data.Color;
     }
 
     private void Start()
     {
-        origin = transform.position;
-        _originalColor = _meshRenderer.material.color; // Kendi rengimizi de kaydedelim
-
+        _originalColor = _meshRenderer.material.color; // Kendi rengimiz, flashRed() için lazım olacak
     }
 
     public void OnClick()
@@ -91,10 +89,20 @@ public class CubeController : MonoBehaviour, IClickable
         // Her frame'de önünde engel var mı bak
         if (Physics.Raycast(transform.position, dir, out hit, _moveDistance, _obstacleLayer))
         {
-            // Eğer aradaki mesafe 1 birim veya daha azsa dur
+        
+            var otherController = hit.collider.GetComponent<CubeController>();
+
+            Debug.Log(otherController._isMoving);
+
+            if (otherController != null && otherController._isMoving)
+            {
+                return true; // Diğer küp hareket ediyorsa, engel yok say
+            }
+
+                // Eğer aradaki mesafe 1 birim veya daha azsa dur
             if (hit.distance <= 0.51f && hit.collider.gameObject != this.gameObject)
             {
-                FlashRed(hit.collider.GetComponent<MeshRenderer>());
+                FlashRed(otherController);
 
                 Debug.Log(hit.distance);
                 // Hedef pozisyonu engelin hemen önüne ayarla
@@ -107,26 +115,18 @@ public class CubeController : MonoBehaviour, IClickable
         return true;
     }
 
-    private void FlashRed(MeshRenderer otherCubeRenderer)
+
+    private void FlashRed(CubeController other)
     {
-        if(_flashSequence != null && _flashSequence.IsActive())
+        if (_flashSequence != null && _flashSequence.IsActive())
         {
-            _flashSequence.Kill(); // Önceki flash'ı iptal et
-
-            _meshRenderer.material.color = _originalColor; // Orijinal renge dön
-
-            var otherColor = otherCubeRenderer.GetComponent<CubeController>();
-            if (otherColor != null)
-            {
-                otherColor._meshRenderer.material.color = otherColor._originalColor; // Diğer küpün orijinal rengine dön
-            }
+            _flashSequence.Kill();
+            _meshRenderer.material.color = _originalColor;
         }
-
-        Color otherCubesColor = otherCubeRenderer.material.color;
-        var otherController = otherCubeRenderer.GetComponent<CubeController>();
-        if (otherController != null)
+        if (other._flashSequence != null && other._flashSequence.IsActive())
         {
-            otherCubesColor = otherController._originalColor; // Diğer küpün orijinal rengini al
+            other._flashSequence.Kill();
+            other._meshRenderer.material.color = other._originalColor;
         }
 
         //Çarpışan küpleri kırmızıya flash yap
@@ -134,15 +134,15 @@ public class CubeController : MonoBehaviour, IClickable
                     .Append(_meshRenderer.material
                         .DOColor(Color.red, _flashDuration)
                         .SetEase(Ease.InOutQuad))
-                    .Join(otherCubeRenderer.material
+                    .Join(other._meshRenderer.material
                         .DOColor(Color.red, _flashDuration)
                         .SetEase(Ease.InOutQuad))
 
                     .Append(_meshRenderer.material
                         .DOColor(_originalColor, _flashDuration)
                         .SetEase(Ease.InOutQuad))
-                    .Join(otherCubeRenderer.material
-                        .DOColor(otherCubesColor, _flashDuration)
+                    .Join(other._meshRenderer.material
+                        .DOColor(other._originalColor, _flashDuration)
                         .SetEase(Ease.InOutQuad));
     
 }
