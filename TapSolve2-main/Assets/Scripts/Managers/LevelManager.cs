@@ -10,6 +10,7 @@ public class LevelManager : MonoBehaviour
 
     private int _currentLevelIndex = 0;
     private int _remainingCubes;
+    private int _actualLevelNumber = 1; //Ekranda gösterilecek gerçek seviye numarasý, index için kullanýlacak deðil
 
     private SmartCubeSpawner _cubeSpawner;
     private UIManager _uiManager;
@@ -59,6 +60,8 @@ public class LevelManager : MonoBehaviour
         }
         _currentLevelIndex = levelIndex;
         LevelData data = _levels[levelIndex];
+        
+        UIManager.Instance.UpdateLevelText(_actualLevelNumber);
 
         if (GridManager.Instance != null)
         {
@@ -67,7 +70,7 @@ public class LevelManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.SetMoveLimit(data.moveLimit);
+            GameManager.Instance.SetMoveLimit(data.rows * data.columns + 4);
             GameManager.Instance.InitializeGame();
         }
 
@@ -77,11 +80,6 @@ public class LevelManager : MonoBehaviour
 
         //Set remaining cubes
         _remainingCubes = data.rows * data.columns;
-
-        // Update UI
-        //_uiManager.UpdateCubesRemaining(_remainingCubes);
-        //_uiManager.UpdateLevelText(data.levelNumber);
-        //_uiManager.UpdateMovesRemaining(GameManager.Instance.MovesLimit);
     }
 
     private IEnumerator SpawnCubesWithDelay()
@@ -112,20 +110,34 @@ public class LevelManager : MonoBehaviour
     }
     public void NextLevel()
     {
-        LoadLevel(_currentLevelIndex + 1);
+        // Mevcut level index'i artýr
+        _currentLevelIndex++;
+        _actualLevelNumber++;
+
+        // Eðer son seviyeye ulaþtýysak, baþa dön
+        if (_currentLevelIndex >= _levels.Length)
+        {
+            _currentLevelIndex = 0;
+        }
+
+        Debug.Log($"Loading level {_currentLevelIndex + 1} (Array index: {_currentLevelIndex})");
+
+        LoadLevel(_currentLevelIndex);
     }
+
     public void RestartLevel()
     {
         LoadLevel(_currentLevelIndex);
     }
     private void HandleMoveChanged(int newMoves)
     {
-        Debug.Log(newMoves);
+        //Debug.Log(newMoves);
         //_uiManager.UpdateMovesRemaining(newMoves);
     }
     private void HandleCubeCleared(CubeController cube)
     {
         _remainingCubes--;
+        Debug.Log(_remainingCubes);
         Debug.Log(_remainingCubes);
 
         //uiManager.UpdateCubesRemaining(remainingCubes);
@@ -147,7 +159,7 @@ public class LevelManager : MonoBehaviour
     }
     private IEnumerator LoadNextLevelWithDelay()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.2f);
         NextLevel();
     }
 }

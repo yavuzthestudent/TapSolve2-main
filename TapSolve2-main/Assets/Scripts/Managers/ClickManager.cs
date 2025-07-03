@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class ClickManager : MonoBehaviour
 {
@@ -13,13 +14,16 @@ public class ClickManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            // Eðer imleç herhangi bir UI öðesinin (buton, panel vb.) üzerindeyse
+            if (EventSystem.current.IsPointerOverGameObject())
+                return;  // 3D sahneye týklamayý iptal et
+
+            // Deðilse sahneye raycast at
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            if (Physics.Raycast(ray, out RaycastHit hit) &&
+                hit.collider.TryGetComponent<IClickable>(out var clickable))
             {
-                if(hit.collider.TryGetComponent<IClickable>(out var clickable))
-                {
-                    clickable.OnClick();
-                }
+                clickable.OnClick();
             }
         }
     }

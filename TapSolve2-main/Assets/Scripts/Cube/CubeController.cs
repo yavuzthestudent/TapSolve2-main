@@ -1,10 +1,12 @@
 using DG.Tweening;
 using UnityEngine;
+using static UnityEngine.ParticleSystem;
 using static UnityEngine.UI.Image;
 
 public class CubeController : MonoBehaviour, IClickable
 {
     [SerializeField] private MeshRenderer _meshRenderer;
+    [SerializeField] private TrailRenderer _trail;
     [SerializeField] private Transform _arrowTransform;
     [SerializeField] private float _moveDistance = 1f;
     [SerializeField] private float _moveSpeed = 1f;
@@ -29,11 +31,14 @@ public class CubeController : MonoBehaviour, IClickable
         dir = DirectionToVector(_cubeData.Direction);
 
         _originalColor = data.Color;
+
+        ConfigureTrailRenderer(data.Color);
     }
 
     private void Start()
     {
         _originalColor = _meshRenderer.material.color; // Kendi rengimiz, flashRed() için lazım olacak
+        _trail = GetComponent<TrailRenderer>();
     }
 
     public void OnClick()
@@ -89,10 +94,7 @@ public class CubeController : MonoBehaviour, IClickable
         // Her frame'de önünde engel var mı bak
         if (Physics.Raycast(transform.position, dir, out hit, _moveDistance, _obstacleLayer))
         {
-        
             var otherController = hit.collider.GetComponent<CubeController>();
-
-            Debug.Log(otherController._isMoving);
 
             if (otherController != null && otherController._isMoving)
             {
@@ -145,12 +147,54 @@ public class CubeController : MonoBehaviour, IClickable
                         .DOColor(other._originalColor, _flashDuration)
                         .SetEase(Ease.InOutQuad));
     
-}
+    }
     public void ResetState()
     {
         _isMoving = false;
         _moveTween?.Kill(); // Önceki tween'i iptal et
     }
+    private void ConfigureTrailRenderer(Color color)
+    {
+        if (_trail == null) return;
+
+        // 1) Materyali Unlit/Color olarak ayarla, temel rengi ver
+        var mat = new Material(Shader.Find("Unlit/Color"));
+        mat.SetColor("_Color", color);
+        _trail.material = mat;
+
+        // 2) İz süresi: ne kadar uzun bir süre iz kalsın
+        _trail.time = 0.45f;
+
+        // 4) Genişlik: çok kalın başlayıp azalarak sönümlensin
+        //    startWidth/endWidth birlikte kullanırsan widthCurve’a gerek kalmaz
+        _trail.startWidth = 0.46f;   // başlangıçta kalınlık
+        _trail.endWidth = 0.0f;   // sonunda inceleyip yok olsun
+
+        // 5) Renk degradeyi ayarla: başta dolgun, sonda saydam
+        var grad = new Gradient();
+        grad.SetKeys(
+            new[]
+            {
+            new GradientColorKey(color,    0f),
+            new GradientColorKey(color * 0.6f, 1f)
+            },
+            new[]
+            {
+            new GradientAlphaKey(1f, 0f),
+            new GradientAlphaKey(0f, 1f)
+            }
+        );
+        _trail.colorGradient = grad;
+
+        // 6) Kameraya hizalı çizgi (daha temiz görünür)
+        _trail.alignment = LineAlignment.View;
+
+        // 7) Hemen temizleyip emit’i aç, böylece hareketin başında eksik iz kalmasın
+        _trail.Clear();
+        _trail.emitting = false;
+        _trail.emitting = true;
+    }
+
     private Quaternion GetRotationForDirection(Direction direction)
     {
         switch (direction)

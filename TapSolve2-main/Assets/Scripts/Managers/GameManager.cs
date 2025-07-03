@@ -34,14 +34,15 @@ public class GameManager : MonoBehaviour
 
     public void UseMove()
     {
+        // 1) Decrement
+        MovesLimit--;
+        // 2) Update UI
+        EventManager.RaiseMoveChanged(MovesLimit);
+        // 3) If we just hit zero or below, game over right now
         if (MovesLimit <= 0)
         {
-            Debug.Log("Hamle sayýsý bitti!");
             EventManager.RaiseLevelFail();
-            return;
         }
-        // Hamle sayýsýný azalt
-        MovesLimit--;
-        EventManager.RaiseMoveChanged(MovesLimit);
     }
+
 }

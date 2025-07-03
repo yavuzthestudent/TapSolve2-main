@@ -33,8 +33,12 @@ public class GridManager : MonoBehaviour
 
     private void CalculateOrigin()
     {
+        float baseY = -2f;
+        int baseRows = 4;
+        float yOrigin = baseY - (Rows - baseRows) * 0.5f;
         float xOrigin = -((Columns - 1) / 2f);
-        _origin = new Vector3(xOrigin, -3f, 17f);
+
+        _origin = new Vector3(xOrigin, yOrigin, 17f);
     }
 
     // Rows ve Columns deðiþtiðinde origin'i yeniden hesapla
