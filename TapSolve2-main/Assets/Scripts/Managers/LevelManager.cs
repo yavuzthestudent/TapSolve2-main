@@ -12,7 +12,14 @@ public class LevelManager : MonoBehaviour
     private int _remainingCubes;
     private int _actualLevelNumber = 1; //Ekranda gösterilecek gerçek seviye numarasý, index için kullanýlacak deðil
 
-    private SmartCubeSpawner _cubeSpawner;
+    [Header("Grid Settings (Runtime)")]
+    [SerializeField] private Vector2 _startPos = new Vector2(0f, 0f);
+    [SerializeField] private float _cellSize = 1f;
+
+    [SerializeField] private int _columns = 4;
+    [SerializeField] private int _rows = 9;
+
+    //private SmartCubeSpawner _cubeSpawner;
     private UIManager _uiManager;
 
     private void Awake()
@@ -28,8 +35,7 @@ public class LevelManager : MonoBehaviour
 
     private void Start()
     {
-        _cubeSpawner = FindFirstObjectByType<SmartCubeSpawner>(); // Updated method  
-        //_uiManager = FindFirstObjectByType<UIManager>(); // Updated method  
+        //_cubeSpawner = FindFirstObjectByType<SmartCubeSpawner>(); // Updated method  
 
         LoadLevel(_currentLevelIndex);
     }
@@ -60,17 +66,12 @@ public class LevelManager : MonoBehaviour
         }
         _currentLevelIndex = levelIndex;
         LevelData data = _levels[levelIndex];
-        
-        UIManager.Instance.UpdateLevelText(_actualLevelNumber);
 
-        if (GridManager.Instance != null)
-        {
-            GridManager.Instance.UpdateGridSize(data.rows, data.columns);
-        }
+        UIManager.Instance.UpdateLevelText(_actualLevelNumber);
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.SetMoveLimit(data.rows * data.columns + 4);
+            GameManager.Instance.SetMoveLimit(_levels[levelIndex].moveLimit);
             GameManager.Instance.InitializeGame();
         }
 
@@ -79,22 +80,37 @@ public class LevelManager : MonoBehaviour
         StartCoroutine(SpawnCubesWithDelay());//Yeni küpleri spawn etmeden bekle
 
         //Set remaining cubes
-        _remainingCubes = data.rows * data.columns;
+        _remainingCubes = _levels[_currentLevelIndex].Cubes.Count;
     }
 
     private IEnumerator SpawnCubesWithDelay()
     {
-        yield return new WaitForEndOfFrame(); // Grid ayarlarýnýn uygulanmasý için bekle
+        yield return new WaitForEndOfFrame();
 
-        if (_cubeSpawner != null)
+        // 1) Sahnedeki eski küpleri temizle
+        ClearExistingCubes();
+
+        // 2) Þu anki LevelData’yý al
+        var data = _levels[_currentLevelIndex];
+
+        float offsetX = -((data.columns - 1) * 0.5f * _cellSize);
+        float offsetY = -((data.rows - 1) * 0.5f * _cellSize);
+        // 3) Listede kayýtlý her CubeData için spawn et
+        foreach (var cd in data.Cubes)
         {
-            _cubeSpawner.SpawnGrid();
+            // cd.GridPosition kullanarak world pozisyonunu hesapla:
+            Vector3 worldPos = new Vector3(
+                offsetX + cd.GridPosition.x * _cellSize,
+                offsetY + cd.GridPosition.y * _cellSize,
+                14f
+            );
+            CubeFactory.Instance.SpawnCube(cd, worldPos);
         }
-        else
-        {
-            Debug.LogError("CubeSpawner is null!");
-        }
+
+        // 4) Kalan küp sayýsýný güncelle (opsiyonel)
+        _remainingCubes = data.Cubes.Count;
     }
+
 
     private void ClearExistingCubes()
     {
@@ -110,6 +126,7 @@ public class LevelManager : MonoBehaviour
     }
     public void NextLevel()
     {
+
         // Mevcut level index'i artýr
         _currentLevelIndex++;
         _actualLevelNumber++;
@@ -120,7 +137,7 @@ public class LevelManager : MonoBehaviour
             _currentLevelIndex = 0;
         }
 
-        Debug.Log($"Loading level {_currentLevelIndex + 1} (Array index: {_currentLevelIndex})");
+        Debug.Log($"(Array index: {_currentLevelIndex})");
 
         LoadLevel(_currentLevelIndex);
     }
@@ -129,11 +146,13 @@ public class LevelManager : MonoBehaviour
     {
         LoadLevel(_currentLevelIndex);
     }
+
     private void HandleMoveChanged(int newMoves)
     {
         //Debug.Log(newMoves);
         //_uiManager.UpdateMovesRemaining(newMoves);
     }
+
     private void HandleCubeCleared(CubeController cube)
     {
         _remainingCubes--;
@@ -148,6 +167,7 @@ public class LevelManager : MonoBehaviour
             EventManager.RaiseLevelComplete();
         }
     }
+
     private void HandleLevelFailed()
     {
         //uiManager.ShowLevelFailPanel();

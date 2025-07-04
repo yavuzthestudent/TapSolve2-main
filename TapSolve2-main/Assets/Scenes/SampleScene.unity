@@ -1660,11 +1660,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _levels:
-  - {fileID: 11400000, guid: 34b8c3b5c1bdcb74cb3b0fa9a28085c4, type: 2}
-  - {fileID: 11400000, guid: c6621ee11c156ed43b096a1d067758d8, type: 2}
-  - {fileID: 11400000, guid: 2d7b7c9832ff35a4bbdd4143e69db35e, type: 2}
-  - {fileID: 11400000, guid: af0e87070f1415248930ebc2fe2ab074, type: 2}
-  - {fileID: 11400000, guid: 1a625c1b398be7540a0ac3c918bedef9, type: 2}
+  - {fileID: 11400000, guid: c747051b09215c846906d878d4ca2f95, type: 2}
+  - {fileID: 11400000, guid: 3ce700ebe6c139945b583f0e6a9cde32, type: 2}
+  - {fileID: 11400000, guid: 124554ebbde35164cb6915bd2d8cb5c0, type: 2}
+  _startPos: {x: 0, y: 0}
+  _cellSize: 1
+  _columns: 4
+  _rows: 9
 --- !u!4 &1517926162
 Transform:
   m_ObjectHideFlags: 0

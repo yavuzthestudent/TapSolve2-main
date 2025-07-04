@@ -26,13 +26,13 @@ public class CubeController : MonoBehaviour, IClickable
     public void Initialize(CubeData data)
     {
         _cubeData = data;
-        _meshRenderer.material.color = data.Color;
+        _meshRenderer.material.color = GetColorForDirection(_cubeData.Direction);
         _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
         dir = DirectionToVector(_cubeData.Direction);
 
-        _originalColor = data.Color;
+        _originalColor = _meshRenderer.material.color;
 
-        ConfigureTrailRenderer(data.Color);
+        ConfigureTrailRenderer(_originalColor);
     }
 
     private void Start()
@@ -199,10 +199,10 @@ public class CubeController : MonoBehaviour, IClickable
     {
         switch (direction)
         {
-            case Direction.Up: return Quaternion.Euler(0, 0, 0);
-            case Direction.Down: return Quaternion.Euler(0, 180, 0);
-            case Direction.Left: return Quaternion.Euler(0, -90, 0);
-            case Direction.Right: return Quaternion.Euler(0, 90, 0);
+            case Direction.Down: return Quaternion.Euler(0, 0, 0);
+            case Direction.Up: return Quaternion.Euler(0, 180, 0);
+            case Direction.Right: return Quaternion.Euler(0, -90, 0);
+            case Direction.Left: return Quaternion.Euler(0, 90, 0);
             default: return Quaternion.identity;
         }
     }
@@ -210,11 +210,22 @@ public class CubeController : MonoBehaviour, IClickable
     {
         switch (direction)
         {
-            case Direction.Up: return Vector3.down;
-            case Direction.Down: return Vector3.up;
-            case Direction.Left: return Vector3.right;
-            case Direction.Right: return Vector3.left;
+            case Direction.Up: return Vector3.up;
+            case Direction.Down: return Vector3.down;
+            case Direction.Left: return Vector3.left;
+            case Direction.Right: return Vector3.right;
             default: return Vector3.zero;
         }
+    }
+    private Color GetColorForDirection(Direction dir)
+    {
+        return dir switch
+        {
+            Direction.Up => Color.blue,
+            Direction.Down => Color.green,
+            Direction.Left => Color.black,
+            Direction.Right => Color.grey,
+            _ => Color.white,
+        };
     }
 }

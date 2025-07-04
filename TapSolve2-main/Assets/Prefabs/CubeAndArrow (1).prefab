@@ -150,7 +150,7 @@ MonoBehaviour:
   _trail: {fileID: 7961935358142754448}
   _arrowTransform: {fileID: 2687183296066565672}
   _moveDistance: 15
-  _moveSpeed: 2
+  _moveSpeed: 0.75
   _flashDuration: 0.15
   _obstacleLayer:
     serializedVersion: 2

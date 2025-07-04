@@ -1,13 +1,19 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Level_", menuName = "Game/Level Data")]
+[CreateAssetMenu(menuName = "Unpuzzle/Level Data")]
 public class LevelData : ScriptableObject
 {
-    [Header("Level Info")]
+    [Header("Identity")]
     public int levelNumber;
-    public int moveLimit = 20;
 
-    [Header("Grid Settings")]
-    public int rows = 2;
-    public int columns = 2;
+    [Header("Grid Size")]
+    public int rows;       // küçük harf: LevelEditorWindow ile uyumlu
+    public int columns;    // küçük harf
+
+    [Header("Gameplay")]
+    public int moveLimit;
+
+    [Header("Cube Layout")]
+    public List<CubeData> Cubes = new List<CubeData>();  // bu liste LevelEditorWindow kaydedecek
 }
