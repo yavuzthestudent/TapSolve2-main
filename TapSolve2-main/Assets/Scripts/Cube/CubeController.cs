@@ -8,9 +8,11 @@ public class CubeController : MonoBehaviour, IClickable
     [SerializeField] private MeshRenderer _meshRenderer;
     [SerializeField] private TrailRenderer _trail;
     [SerializeField] private Transform _arrowTransform;
+
     [SerializeField] private float _moveDistance = 1f;
     [SerializeField] private float _moveSpeed = 1f;
     [SerializeField] private float _flashDuration = 0.15f;
+
     [SerializeField] private LayerMask _obstacleLayer;
 
     private CubeData _cubeData;
@@ -47,7 +49,7 @@ public class CubeController : MonoBehaviour, IClickable
             return;
 
         // Hamleyi kullan
-        GameManager.Instance.UseMove();
+        Level.Instance.UseMove();
 
         // Hedef pozisyonu hesapla
         Vector3 targetPos = transform.position + dir * _moveDistance;
@@ -117,7 +119,6 @@ public class CubeController : MonoBehaviour, IClickable
         return true;
     }
 
-
     private void FlashRed(CubeController other)
     {
         if (_flashSequence != null && _flashSequence.IsActive())
@@ -153,6 +154,7 @@ public class CubeController : MonoBehaviour, IClickable
         _isMoving = false;
         _moveTween?.Kill(); // Önceki tween'i iptal et
     }
+
     private void ConfigureTrailRenderer(Color color)
     {
         if (_trail == null) return;
@@ -206,6 +208,7 @@ public class CubeController : MonoBehaviour, IClickable
             default: return Quaternion.identity;
         }
     }
+
     private Vector3 DirectionToVector(Direction direction)
     {
         switch (direction)
@@ -217,6 +220,7 @@ public class CubeController : MonoBehaviour, IClickable
             default: return Vector3.zero;
         }
     }
+
     private Color GetColorForDirection(Direction dir)
     {
         return dir switch

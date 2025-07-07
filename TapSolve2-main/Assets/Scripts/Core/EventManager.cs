@@ -5,6 +5,8 @@ public class EventManager : MonoBehaviour
 {
     public static event Action<int> OnMoveChanged; //When move count changes
 
+    public static event Action<int> OnLevelNumberChanged; //When level number changes
+
     public static event Action<CubeController> OnCubeCleared; //When cube destroyed 
 
     public static event Action OnLevelFail; //When game is over
@@ -14,6 +16,11 @@ public class EventManager : MonoBehaviour
     public static void RaiseMoveChanged(int newMoves)
     {
         OnMoveChanged?.Invoke(newMoves);
+    }
+    
+    public static void RaiseLevelNumberChanged(int levelNumber)
+    {
+        OnLevelNumberChanged?.Invoke(levelNumber);
     }
 
     public static void RaiseCubeCleared(CubeController cube)

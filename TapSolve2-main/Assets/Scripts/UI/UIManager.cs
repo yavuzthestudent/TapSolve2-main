@@ -34,6 +34,7 @@ public class UIManager : MonoBehaviour
         EventManager.OnMoveChanged += UpdateMovesRemaining;
         EventManager.OnLevelCompleted += OnLevelCleared;
         EventManager.OnLevelFail += OnLevelFailed;
+        EventManager.OnLevelNumberChanged += UpdateLevelText;
     }
 
     private void OnDisable()
@@ -41,10 +42,12 @@ public class UIManager : MonoBehaviour
         EventManager.OnMoveChanged -= UpdateMovesRemaining;
         EventManager.OnLevelCompleted -= OnLevelCleared;
         EventManager.OnLevelFail -= OnLevelFailed;
+        EventManager.OnLevelNumberChanged -= UpdateLevelText;
     }
 
     public void UpdateLevelText(int levelNumber)
     {
+        Debug.Log("Level number updated: " + levelNumber);
         _levelText.text = $"Level {levelNumber}";
     }
 
@@ -53,17 +56,12 @@ public class UIManager : MonoBehaviour
         _movesText.text = $"Moves: {movesLeft}";
     }
 
-    public void LoadSampleScene()
-    {
-        SceneManager.LoadScene("SampleScene");
-    }
-
     public void OnReplayPressed()
     {
         _failedScreen.SetActive(false);
         _replayButton.SetActive(true);
 
-        LevelManager.Instance.RestartLevel();
+        GameManager.Instance.RestartLevel();
     }
 
     public void OnNextButtonPressed()
@@ -71,23 +69,27 @@ public class UIManager : MonoBehaviour
         _successScreen.SetActive(false);
         _replayButton.SetActive(true);
         // Sonraki seviyeye geç
-        LevelManager.Instance.NextLevel();
+        GameManager.Instance.NextLevel();
     }
-    private void OnLevelCleared() => ShowEndScreen(_successScreen);
 
-    private void OnLevelFailed() => ShowEndScreen(_failedScreen);
+    private void OnLevelCleared()
+    {
+        ShowEndScreen(_successScreen);
+    }
+
+    private void OnLevelFailed()
+    {
+        ShowEndScreen(_failedScreen);
+    }
 
     private void ShowEndScreen(GameObject screen)
     {
-        Debug.Log("SHOOWWW END SCREEN");
         // Replay tuþunu kapat
         _replayButton.SetActive(false);
 
-        // Paneli görünür kýl ve baþlangýç ölçeðini sýfýrla
         screen.SetActive(true);
         screen.transform.localScale = Vector3.zero;
 
-        // Tween’i doðrudan transform’a uygulayýp OutBack easing’i kullan
         screen.transform
               .DOScale(_endScreenScale, _animationDuration)
               .SetEase(Ease.OutBack);

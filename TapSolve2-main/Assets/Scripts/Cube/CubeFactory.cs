@@ -1,3 +1,5 @@
+using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CubeFactory : MonoBehaviour
@@ -8,6 +10,7 @@ public class CubeFactory : MonoBehaviour
     [SerializeField] private int _initialSize = 30;
 
     private CubePool _cubePool;
+    private List<CubeController> _activeCubes = new List<CubeController>();
 
     private void Awake()
     {
@@ -39,17 +42,14 @@ public class CubeFactory : MonoBehaviour
             return null;
         }
 
-        go.transform.position = worldPosition;       // Pozisyon ayarlanýyor
+        go.transform.position = worldPosition;
 
         controller.ResetState();
-        controller.Initialize(data);                  // Renk ve yön bilgisi yükleniyor
+        controller.Initialize(data);
 
         go.SetActive(true);
 
-        //foreach(var control in controller)
-        //{
-        //    go.SetActive(true);
-        //}
+        _activeCubes.Add(controller); // Aktif küpler listesine ekleniyor
 
         return controller;
     }
@@ -58,7 +58,18 @@ public class CubeFactory : MonoBehaviour
     {
         if (controller != null && controller.gameObject != null)
         {
-            _cubePool.Release(controller.gameObject);    // Havuz’a geri koyma da burada
+            _cubePool.Release(controller.gameObject); // Havuz’a geri koyma da burada
+
+            _activeCubes.Remove(controller); // Aktif küpler listesinden çýkarýlýyor
+        }
+    }
+    public void ClearAllCubes()
+    {
+        // Listeyi diziye kopyala, sonra ona göre temizle
+        var copy = _activeCubes.ToArray();
+        foreach (var cube in copy)
+        {
+            ReleaseCube(cube);
         }
     }
 }
