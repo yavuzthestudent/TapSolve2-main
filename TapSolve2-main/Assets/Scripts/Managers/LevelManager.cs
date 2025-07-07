@@ -156,9 +156,6 @@ public class LevelManager : MonoBehaviour
     private void HandleCubeCleared(CubeController cube)
     {
         _remainingCubes--;
-        Debug.Log(_remainingCubes);
-        Debug.Log(_remainingCubes);
-
         //uiManager.UpdateCubesRemaining(remainingCubes);
 
         if (_remainingCubes <= 0)
@@ -174,7 +171,9 @@ public class LevelManager : MonoBehaviour
     }
     private void HandleLevelCompleted()
     {
-        StartCoroutine(LoadNextLevelWithDelay());
+        //StartCoroutine(LoadNextLevelWithDelay()); // istersen otomatik geçiþ
+
+        //EventManager.RaiseLevelComplete();
         //_uiManager.ShowLevelCompletePanel();
     }
     private IEnumerator LoadNextLevelWithDelay()

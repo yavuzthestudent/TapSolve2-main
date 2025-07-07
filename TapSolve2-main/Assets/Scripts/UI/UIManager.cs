@@ -11,6 +11,11 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TMP_Text _movesText;
     [SerializeField] private GameObject _failedScreen;
     [SerializeField] private GameObject _replayButton; //retry button deðil bu oyun içinde olan, pasifleþtirilecek kaybedildiðinde
+    [SerializeField] private GameObject _successScreen;
+
+    private Vector3 _endScreenScale = new Vector3(5.25f, 6.70f, 1f);
+    private float _animationDuration = 1f;
+
     public static UIManager Instance { get; private set; }
 
     private void Awake()
@@ -61,34 +66,30 @@ public class UIManager : MonoBehaviour
         LevelManager.Instance.RestartLevel();
     }
 
-
-    private void OnLevelCleared()
+    public void OnNextButtonPressed()
     {
-        // Ýstersen “Next” butonu çýkart ya da bir pencere aç
-        // O ana kadar Replay de iþlevini korusun
+        _successScreen.SetActive(false);
+        _replayButton.SetActive(true);
+        // Sonraki seviyeye geç
+        LevelManager.Instance.NextLevel();
     }
+    private void OnLevelCleared() => ShowEndScreen(_successScreen);
 
-    private void OnLevelFailed()
+    private void OnLevelFailed() => ShowEndScreen(_failedScreen);
+
+    private void ShowEndScreen(GameObject screen)
     {
-        Debug.Log("Level Failed!");
-        //_failedScreen.SetActive(true);
-        PlayLoseAnimation();
+        Debug.Log("SHOOWWW END SCREEN");
+        // Replay tuþunu kapat
         _replayButton.SetActive(false);
-    }
-    private void PlayLoseAnimation()
-    {
-        // Paneli görünür yap
-        _failedScreen.SetActive(true);
 
-        // Baþlangýç ölçeði
-        _failedScreen.transform.localScale = Vector3.zero;
+        // Paneli görünür kýl ve baþlangýç ölçeðini sýfýrla
+        screen.SetActive(true);
+        screen.transform.localScale = Vector3.zero;
 
-        // Sequence ile pop-in
-        Sequence seq = DOTween.Sequence();
-        seq.Append(_failedScreen.transform
-            // X=5.25, Y=6.7, Z=1 olarak ölçekle
-            .DOScale(new Vector3(5.25f, 6.70f, 1f), 1f)
-            .SetEase(Ease.OutBack)
-        );
+        // Tween’i doðrudan transform’a uygulayýp OutBack easing’i kullan
+        screen.transform
+              .DOScale(_endScreenScale, _animationDuration)
+              .SetEase(Ease.OutBack);
     }
 }
