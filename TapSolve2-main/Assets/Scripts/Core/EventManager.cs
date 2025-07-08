@@ -13,6 +13,8 @@ public class EventManager : MonoBehaviour
 
     public static event Action OnLevelCompleted; //When level is completed
 
+    public static event Action OnMoveRequested; //When move is requested by player
+
     public static void RaiseMoveChanged(int newMoves)
     {
         OnMoveChanged?.Invoke(newMoves);
@@ -36,5 +38,10 @@ public class EventManager : MonoBehaviour
     public static void RaiseLevelComplete()
     {
         OnLevelCompleted?.Invoke();
+    }
+
+    public static void RaiseMoveRequested()
+    {
+        OnMoveRequested?.Invoke();
     }
 }

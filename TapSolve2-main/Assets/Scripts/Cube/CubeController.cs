@@ -3,60 +3,59 @@ using UnityEngine;
 using static UnityEngine.ParticleSystem;
 using static UnityEngine.UI.Image;
 
-public class CubeController : MonoBehaviour, IClickable
-{
-    [SerializeField] private MeshRenderer _meshRenderer;
-    [SerializeField] private TrailRenderer _trail;
-    [SerializeField] private Transform _arrowTransform;
-
-    [SerializeField] private float _moveDistance = 1f;
-    [SerializeField] private float _moveSpeed = 1f;
-    [SerializeField] private float _flashDuration = 0.15f;
-
-    [SerializeField] private LayerMask _obstacleLayer;
-
-    private CubeData _cubeData;
-    private Tween _moveTween;
-    private Sequence _flashSequence;
-    private Color _originalColor;
-
-    private bool _isMoving;
-    private bool _canMove;
-
-    private Vector3 dir;
-
-    public void Initialize(CubeData data)
+    public class CubeController : MonoBehaviour, IClickable
     {
-        _cubeData = data;
-        _meshRenderer.material.color = GetColorForDirection(_cubeData.Direction);
-        _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
-        dir = DirectionToVector(_cubeData.Direction);
+        [SerializeField] private MeshRenderer _meshRenderer;
+        [SerializeField] private TrailRenderer _trail;
+        [SerializeField] private Transform _arrowTransform;
 
-        _originalColor = _meshRenderer.material.color;
+        [SerializeField] private float _moveDistance = 1f;
+        [SerializeField] private float _moveSpeed = 1f;
+        [SerializeField] private float _flashDuration = 0.15f;
 
-        ConfigureTrailRenderer(_originalColor);
-    }
+        [SerializeField] private LayerMask _obstacleLayer;
 
-    private void Start()
-    {
-        _originalColor = _meshRenderer.material.color; // Kendi rengimiz, flashRed() için lazım olacak
-        _trail = GetComponent<TrailRenderer>();
-    }
+        private CubeData _cubeData;
+        private Tween _moveTween;
+        private Sequence _flashSequence;
+        private Color _originalColor;
 
-    public void OnClick()
-    {
-        if (_isMoving)
-            return;
+        private bool _isMoving;
+        private bool _canMove;
 
-        // Hamleyi kullan
-        Level.Instance.UseMove();
+        private Vector3 dir;
 
-        // Hedef pozisyonu hesapla
-        Vector3 targetPos = transform.position + dir * _moveDistance;
+        public void Initialize(CubeData data)
+        {
+            _cubeData = data;
+            _meshRenderer.material.color = GetColorForDirection(_cubeData.Direction);
+            _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
+            dir = DirectionToVector(_cubeData.Direction);
 
-        // Hareketi ayrı metotta başlat
-        MoveToPosition(targetPos);
-    }
+            _originalColor = _meshRenderer.material.color;
+
+            ConfigureTrailRenderer(_originalColor);
+        }
+
+        private void Start()
+        {
+            _originalColor = _meshRenderer.material.color; // Kendi rengimiz, flashRed() için lazım olacak
+            _trail = GetComponent<TrailRenderer>();
+        }
+
+        public void OnClick()
+        {
+            if (_isMoving)
+                return;
+            // Hamleyi kullan
+            EventManager.RaiseMoveRequested();
+
+            // Hedef pozisyonu hesapla
+            Vector3 targetPos = transform.position + dir * _moveDistance;
+
+            // Hareketi ayrı metotta başlat
+            MoveToPosition(targetPos);
+        }
 
     private void MoveToPosition(Vector3 target)
     {

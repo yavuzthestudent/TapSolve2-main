@@ -4,8 +4,11 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    [SerializeField] private LevelManager _levelManager;
+
     private void Awake()
     {
+        Debug.Log("calisti");
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
     }
@@ -17,16 +20,16 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
-        LevelManager.Instance.LoadLevel(0);
+        _levelManager.LoadLevel(0);
     }
 
     public void NextLevel()
     {
-        LevelManager.Instance.LoadNext();
+        _levelManager.LoadNext();
     }
 
     public void RestartLevel()
     {
-        LevelManager.Instance.ReloadCurrent();
+        _levelManager.ReloadCurrent();
     }
 }

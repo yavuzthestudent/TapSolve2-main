@@ -1,13 +1,9 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// Handles spawning, move management and completion/failure logic for a single level.
-/// </summary>
 public class Level : MonoBehaviour
 {
     [Header("Grid Settings")]
-    [Tooltip("Size of each cell in world units.")]
     [SerializeField] private float _cellSize = 1f;
 
     [Header("Level Settings")]
@@ -15,22 +11,16 @@ public class Level : MonoBehaviour
     private int _remainingMoves;
     private int _remainingCubes;
 
-    public static Level Instance { get; private set; }
-
-    private void Awake()
-    {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this;
-    }
-
     private void OnEnable()
     {
         EventManager.OnCubeCleared += HandleCubeCleared;
+        EventManager.OnMoveRequested += UseMove;
     }
 
     private void OnDisable()
     {
         EventManager.OnCubeCleared -= HandleCubeCleared;
+        EventManager.OnMoveRequested -= UseMove;
     }
 
     public void LoadLevel(LevelData levelData)
@@ -40,6 +30,7 @@ public class Level : MonoBehaviour
             Debug.LogError("LevelData is null!");
             return;
         }
+        ClearExistingCubes();
 
         _currentLevelData = levelData;
         _remainingMoves = levelData.moveLimit;
@@ -49,7 +40,6 @@ public class Level : MonoBehaviour
         EventManager.RaiseMoveChanged(_remainingMoves);
 
         // Clear any leftover cubes then spawn new ones
-        ClearExistingCubes();
         SpawnCubes();
     }
 

@@ -2,29 +2,13 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
-    public static LevelManager Instance { get; private set; }
-
     [SerializeField] private LevelData[] levels;
 
-    [SerializeField] private Level _levelView;
+    [SerializeField] private Level _levelPrefab;
 
     private int _currentIndex = 0;           
-    private int _displayedLevelNumber = 1;     
-
-    private void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-    }
-
-    private void Start()
-    {
-        LoadLevel(_currentIndex);
-    }
+    private int _displayedLevelNumber = 1;
+    private Level _levelView;
 
     public void LoadLevel(int index)
     {
@@ -38,6 +22,21 @@ public class LevelManager : MonoBehaviour
 
         EventManager.RaiseLevelNumberChanged(_displayedLevelNumber);
 
+        // Mevcut level prefab'ýný yok et
+        if (_levelView != null)
+        {
+            // Event'leri temizle
+            _levelView.gameObject.SetActive(false);
+            Destroy(_levelView.gameObject);
+            Debug.Log("Level prefab yok edildi");
+        }
+
+        // Mevcut küpleri temizle
+        CubeFactory.Instance.ClearAllCubes();
+
+        // Yeni level prefab'ý oluþtur
+        _levelView = Instantiate(_levelPrefab);
+
         // Seçili leveli yükle
         _levelView.LoadLevel(levels[_currentIndex]);
     }
@@ -45,6 +44,14 @@ public class LevelManager : MonoBehaviour
     public void ReloadCurrent()
     {
         EventManager.RaiseLevelNumberChanged(_displayedLevelNumber);
+
+        if (_levelView != null)
+        {
+            Destroy(_levelView.gameObject);
+            Debug.Log("yok edildi");
+        }
+        CubeFactory.Instance.ClearAllCubes();
+        _levelView = Instantiate(_levelPrefab);
         _levelView.LoadLevel(levels[_currentIndex]);
     }
 
