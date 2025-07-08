@@ -629,7 +629,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1311232061}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: LoadSampleScene
+        m_MethodName: LoadGame
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -797,6 +797,7 @@ MonoBehaviour:
   _movesText: {fileID: 0}
   _failedScreen: {fileID: 0}
   _replayButton: {fileID: 0}
+  _successScreen: {fileID: 0}
 --- !u!1 &1491915245
 GameObject:
   m_ObjectHideFlags: 0

@@ -6,9 +6,26 @@ public class LevelManager : MonoBehaviour
 
     [SerializeField] private Level _levelPrefab;
 
+    private const string PrefsKeyLevelIndex = "SavedLevelIndex";
+    private const string PrefsKeyDisplayLevelNumber = "SavedDisplayLevelNumber";
+
     private int _currentIndex = 0;           
     private int _displayedLevelNumber = 1;
     private Level _levelView;
+
+    private void Awake()
+    {
+        //Kayýtlýysa kayýtlarý deðiþkenlere ata
+        if(PlayerPrefs.HasKey(PrefsKeyLevelIndex))
+        {
+            _currentIndex = PlayerPrefs.GetInt(PrefsKeyLevelIndex);
+            _displayedLevelNumber = PlayerPrefs.GetInt(PrefsKeyDisplayLevelNumber);
+        }
+    }
+    private void Start()
+    {
+        LoadLevel(_currentIndex);
+    }
 
     public void LoadLevel(int index)
     {
@@ -39,10 +56,19 @@ public class LevelManager : MonoBehaviour
 
         // Seçili leveli yükle
         _levelView.LoadLevel(levels[_currentIndex]);
+
+        PlayerPrefs.SetInt(PrefsKeyLevelIndex, _currentIndex);
+        PlayerPrefs.SetInt(PrefsKeyDisplayLevelNumber, _displayedLevelNumber);
+        PlayerPrefs.Save();
     }
 
     public void ReloadCurrent()
     {
+        if (_levelView != null)
+        {
+            _levelView.ClearSavedCubes();
+        }
+
         EventManager.RaiseLevelNumberChanged(_displayedLevelNumber);
 
         if (_levelView != null)
@@ -57,6 +83,11 @@ public class LevelManager : MonoBehaviour
 
     public void LoadNext()
     {
+        if (_levelView != null)
+        {
+            _levelView.ClearSavedCubes();
+        }
+
         _currentIndex++;
         _displayedLevelNumber++;
         LoadLevel(_currentIndex);

@@ -12,6 +12,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject _failedScreen;
     [SerializeField] private GameObject _replayButton; //retry button deðil bu oyun içinde olan, pasifleþtirilecek kaybedildiðinde
     [SerializeField] private GameObject _successScreen;
+    [SerializeField] private GameObject _progressPopUp;
 
     private Vector3 _endScreenScale = new Vector3(5.25f, 6.70f, 1f);
     private float _animationDuration = 1f;
@@ -35,6 +36,7 @@ public class UIManager : MonoBehaviour
         EventManager.OnLevelCompleted += OnLevelCleared;
         EventManager.OnLevelFail += OnLevelFailed;
         EventManager.OnLevelNumberChanged += UpdateLevelText;
+        EventManager.OnProgress += OnProgressPopUp;
     }
 
     private void OnDisable()
@@ -43,6 +45,13 @@ public class UIManager : MonoBehaviour
         EventManager.OnLevelCompleted -= OnLevelCleared;
         EventManager.OnLevelFail -= OnLevelFailed;
         EventManager.OnLevelNumberChanged -= UpdateLevelText;
+        EventManager.OnProgress -= OnProgressPopUp;
+    }
+
+    public void LoadGame()
+    {
+        Debug.Log("Game loaded");
+        SceneManager.LoadScene("SampleScene");
     }
 
     public void UpdateLevelText(int levelNumber)
@@ -58,6 +67,7 @@ public class UIManager : MonoBehaviour
 
     public void OnReplayPressed()
     {
+        _progressPopUp.SetActive(false);
         _failedScreen.SetActive(false);
         _replayButton.SetActive(true);
 
@@ -72,6 +82,12 @@ public class UIManager : MonoBehaviour
         GameManager.Instance.NextLevel();
     }
 
+    public void OnProgressButtonPressed()
+    {
+        _progressPopUp.SetActive(false);
+        _replayButton.SetActive(true);
+    }
+
     private void OnLevelCleared()
     {
         ShowEndScreen(_successScreen);
@@ -80,6 +96,11 @@ public class UIManager : MonoBehaviour
     private void OnLevelFailed()
     {
         ShowEndScreen(_failedScreen);
+    }
+
+    private void OnProgressPopUp()
+    {
+        ShowEndScreen(_progressPopUp);
     }
 
     private void ShowEndScreen(GameObject screen)

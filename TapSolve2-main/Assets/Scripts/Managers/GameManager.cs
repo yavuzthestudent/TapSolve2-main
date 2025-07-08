@@ -13,16 +13,6 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
-    private void Start()
-    {
-        StartGame();
-    }
-
-    public void StartGame()
-    {
-        _levelManager.LoadLevel(0);
-    }
-
     public void NextLevel()
     {
         _levelManager.LoadNext();

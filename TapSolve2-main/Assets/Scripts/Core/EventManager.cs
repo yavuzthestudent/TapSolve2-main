@@ -15,6 +15,8 @@ public class EventManager : MonoBehaviour
 
     public static event Action OnMoveRequested; //When move is requested by player
 
+    public static event Action OnProgress;
+
     public static void RaiseMoveChanged(int newMoves)
     {
         OnMoveChanged?.Invoke(newMoves);
@@ -43,5 +45,10 @@ public class EventManager : MonoBehaviour
     public static void RaiseMoveRequested()
     {
         OnMoveRequested?.Invoke();
+    }
+
+    public static void RaiseExistingProgress()
+    {
+        OnProgress?.Invoke();
     }
 }

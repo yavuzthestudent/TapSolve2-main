@@ -8,6 +8,7 @@ using static UnityEngine.UI.Image;
         [SerializeField] private MeshRenderer _meshRenderer;
         [SerializeField] private TrailRenderer _trail;
         [SerializeField] private Transform _arrowTransform;
+    
 
         [SerializeField] private float _moveDistance = 1f;
         [SerializeField] private float _moveSpeed = 1f;
@@ -23,14 +24,16 @@ using static UnityEngine.UI.Image;
         private bool _isMoving;
         private bool _canMove;
 
-        private Vector3 dir;
+        private Vector3 _dir;
+        private Vector2Int _currentGridPosition;
 
-        public void Initialize(CubeData data)
+        public void Initialize(CubeData data, Vector3 worldPosition)
         {
+            _currentGridPosition = data.GridPosition;
             _cubeData = data;
             _meshRenderer.material.color = GetColorForDirection(_cubeData.Direction);
             _arrowTransform.localRotation = GetRotationForDirection(data.Direction);
-            dir = DirectionToVector(_cubeData.Direction);
+            _dir = DirectionToVector(_cubeData.Direction);
 
             _originalColor = _meshRenderer.material.color;
 
@@ -51,7 +54,7 @@ using static UnityEngine.UI.Image;
             EventManager.RaiseMoveRequested();
 
             // Hedef pozisyonu hesapla
-            Vector3 targetPos = transform.position + dir * _moveDistance;
+            Vector3 targetPos = transform.position + _dir * _moveDistance;
 
             // Hareketi ayrı metotta başlat
             MoveToPosition(targetPos);
@@ -86,14 +89,29 @@ using static UnityEngine.UI.Image;
 
                 // Havuz/Gerikoyma
                 CubeFactory.Instance.ReleaseCube(this);
+
+                //Yeni grid pozisyonu hesaplanıp kaydediliyor
+                _currentGridPosition = CalculateGridPosition(target);
             });
     }
+
+    //private Vector2Int CalculateGridPosition(Vector3 worldPosition)
+    //{
+    //    Level level = LevelManager.Instance.GetCurrentLevel();
+    //    if (level == null)
+    //    {
+    //        return _currentGridPosition;
+    //    }
+
+    //    float
+    //    return CalculateGridPosition(transform.position);
+    //}
 
     private bool MoveCheck()
     {
         RaycastHit hit;
         // Her frame'de önünde engel var mı bak
-        if (Physics.Raycast(transform.position, dir, out hit, _moveDistance, _obstacleLayer))
+        if (Physics.Raycast(transform.position, _dir, out hit, _moveDistance, _obstacleLayer))
         {
             var otherController = hit.collider.GetComponent<CubeController>();
 
@@ -109,7 +127,7 @@ using static UnityEngine.UI.Image;
 
                 Debug.Log(hit.distance);
                 // Hedef pozisyonu engelin hemen önüne ayarla
-                Vector3 stopPos = hit.point - dir.normalized;
+                Vector3 stopPos = hit.point - _dir.normalized;
                 _moveTween.Kill();
                 _isMoving = false;
                 return false;
@@ -230,5 +248,10 @@ using static UnityEngine.UI.Image;
             Direction.Right => Color.grey,
             _ => Color.white,
         };
+    }
+
+    public CubeData GetCubeData()
+    {
+        return _cubeData;
     }
 }
