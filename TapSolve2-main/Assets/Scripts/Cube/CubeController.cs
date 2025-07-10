@@ -25,9 +25,9 @@ public class CubeController : MonoBehaviour, IClickable
 
     private Vector3 _dir;
     private Vector2Int _currentGridPosition;
-    public Vector2Int _cubeLastPosition; // Son pozisyonu tutmak için
+    public Vector2Int _cubeLastPosition; // Çarpışma anında son pozisyonu kaydetmek için
 
-    // Level referansını Initialize sırasında alacağız
+    // Initialize sırasında level referansını alacağız
     private Level _levelReference;
 
     public void Initialize(CubeData data, Level levelRef)
@@ -47,7 +47,7 @@ public class CubeController : MonoBehaviour, IClickable
 
     private void Start()
     {
-        _originalColor = _meshRenderer.material.color; // Kendi rengimiz, flashRed() için lazım olacak
+        _originalColor = _meshRenderer.material.color; // Flash efekti için orijinal rengi sakla
         _trail = GetComponent<TrailRenderer>();
     }
 
@@ -55,44 +55,45 @@ public class CubeController : MonoBehaviour, IClickable
     {
         if (_isMoving)
             return;
-        // Hamleyi kullan
+
+        // Hamle sayısını azalt
         EventManager.RaiseMoveRequested();
 
-        // Hedef pozisyonu hesapla
+        // Hedef pozisyonu yön vektörü ile hesapla
         Vector3 targetPos = transform.position + _dir * _moveDistance;
 
-        // Hareketi ayrı metotta başlat
+        // Hareketi başlat
         MoveToPosition(targetPos);
     }
 
     private void MoveToPosition(Vector3 target)
     {
-        _isMoving = true;
+        // Hareket etmeden önce çarpışma kontrolü yap
+        if (!CheckMovement(transform.position, isPreCheck: true))
+        {
+            return; // Çarpışma tespit edildi, hareket etme
+        }
 
+        _isMoving = true;
         _moveTween = transform
             .DOMove(target, _moveSpeed)
             .SetEase(Ease.InOutQuad)
             .OnUpdate(() =>
             {
-                _canMove = MoveCheck(); // Her güncellemede engel kontrolü yap
-                if (!_canMove)
+                // Hareket sırasında sürekli kontrol et
+                if (!CheckMovement(transform.position, isPreCheck: false))
                 {
-                    // Eğer engel varsa hareketi durdur
                     _isMoving = false;
-                    _moveTween.Kill(); // Tween'i iptal et
+                    _moveTween.Kill();
                     return;
                 }
             })
             .OnComplete(() =>
             {
-                // Hareketi kesinleştir
+                // Hareket tamamlandığında küpü kaldır
                 transform.position = target;
                 _isMoving = false;
-
-                // Küp temizlendi olayı
                 EventManager.RaiseCubeCleared(this);
-
-                // Havuz/Gerikoyma
                 CubeFactory.Instance.ReleaseCube(this);
             });
     }
@@ -102,52 +103,56 @@ public class CubeController : MonoBehaviour, IClickable
         float cell = 1f;
         int cols = _levelReference._currentLevelData.columns;
         int rows = _levelReference._currentLevelData.rows;
+
+        // Grid'i ortalamak için offset hesapla
         float offsetX = -((cols - 1) * 0.5f * cell);
         float offsetY = -((rows - 1) * 0.5f * cell);
 
+        // Dünya koordinatını grid pozisyonuna çevir
         int x = Mathf.RoundToInt((worldPos.x - offsetX) / cell);
         int y = Mathf.RoundToInt((worldPos.y - offsetY) / cell);
         return new Vector2Int(x, y);
     }
 
-    private bool MoveCheck()
+    private bool CheckMovement(Vector3 fromPosition, bool isPreCheck = false)
     {
         RaycastHit hit;
-        // Her frame'de önünde engel var mı bak
-        if (Physics.Raycast(transform.position, _dir, out hit, _moveDistance, _obstacleLayer))
+        if (Physics.Raycast(fromPosition, _dir, out hit, _moveDistance, _obstacleLayer))
         {
             var otherController = hit.collider.GetComponent<CubeController>();
 
-            if (otherController != null && otherController._isMoving)
+            // Diğer küp hareket halindeyse çarpışma yok say (sadece hareket sırasında)
+            if (!isPreCheck && otherController != null && otherController._isMoving)
             {
-                return true; // Diğer küp hareket ediyorsa, engel yok say
+                return true;
             }
 
-            // Eğer aradaki mesafe 1 birim veya daha azsa dur
-            if (hit.distance <= 0.51f && hit.collider.gameObject != this.gameObject)
+            // Çarpışma mesafesi kontrolü - çok yakınsa dur
+            if (hit.distance <= 0.6f && hit.collider.gameObject != this.gameObject)
             {
-                FlashRed(otherController);
+                if (otherController != null)
+                {
+                    FlashRed(otherController);
+                }
 
-                Vector2Int gridPos = CalculateGridPosition(transform.position);
+                // Sadece gerçek hareket sırasında pozisyon kaydet
+                if (!isPreCheck)
+                {
+                    Vector2Int gridPos = CalculateGridPosition(transform.position);
+                    _cubeData.LastPosition = gridPos;
+                    _levelReference.SaveGameState();
+                    Debug.Log($"Collision distance: {hit.distance}");
+                }
 
-                _cubeData.LastPosition = gridPos;
-
-                // 2) Hemen kaydet
-                _levelReference.SaveGameState();
-
-                Debug.Log(hit.distance);
-                // Hedef pozisyonu engelin hemen önüne ayarla
-                Vector3 stopPos = hit.point - _dir.normalized;
-                _moveTween.Kill();
-                _isMoving = false;
-                return false;
+                return false; // Hareket edilemez
             }
         }
-        return true;
+        return true; // Hareket edilebilir
     }
 
     private void FlashRed(CubeController other)
     {
+        // Önceki flash animasyonlarını temizle
         if (_flashSequence != null && _flashSequence.IsActive())
         {
             _flashSequence.Kill();
@@ -159,7 +164,7 @@ public class CubeController : MonoBehaviour, IClickable
             other._meshRenderer.material.color = other._originalColor;
         }
 
-        //Çarpışan küpleri kırmızıya flash yap
+        // İki küpü de aynı anda kırmızıya çevir, sonra eski renklerine döndür
         _flashSequence = DOTween.Sequence()
                     .Append(_meshRenderer.material
                         .DOColor(Color.red, _flashDuration)
@@ -179,46 +184,45 @@ public class CubeController : MonoBehaviour, IClickable
     public void ResetState()
     {
         _isMoving = false;
-        _moveTween?.Kill(); // Önceki tween'i iptal et
+        _moveTween?.Kill(); // Aktif tween varsa iptal et
     }
 
     private void ConfigureTrailRenderer(Color color)
     {
         if (_trail == null) return;
 
-        // 1) Materyali Unlit/Color olarak ayarla, temel rengi ver
+        // Basit bir Unlit material oluştur ve rengini ayarla
         var mat = new Material(Shader.Find("Unlit/Color"));
         mat.SetColor("_Color", color);
         _trail.material = mat;
 
-        // 2) İz süresi: ne kadar uzun bir süre iz kalsın
+        // İz ne kadar süre ekranda kalacak
         _trail.time = 0.45f;
 
-        // 4) Genişlik: çok kalın başlayıp azalarak sönümlensin
-        //    startWidth/endWidth birlikte kullanırsan widthCurve'a gerek kalmaz
-        _trail.startWidth = 0.46f;   // başlangıçta kalınlık
-        _trail.endWidth = 0.0f;   // sonunda inceleyip yok olsun
+        // Genişlik ayarları: kalın başlayıp incelsin
+        _trail.startWidth = 0.46f;   // başlangıç kalınlığı
+        _trail.endWidth = 0.0f;      // bitiş kalınlığı (sıfıra kadar incelsin)
 
-        // 5) Renk degradeyi ayarla: başta dolgun, sonda saydam
+        // Renk geçişi: başta canlı, sonda şeffaf
         var grad = new Gradient();
         grad.SetKeys(
             new[]
             {
-            new GradientColorKey(color,    0f),
-            new GradientColorKey(color * 0.6f, 1f)
+                new GradientColorKey(color, 0f),
+                new GradientColorKey(color * 0.6f, 1f)
             },
             new[]
             {
-            new GradientAlphaKey(1f, 0f),
-            new GradientAlphaKey(0f, 1f)
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0f, 1f)
             }
         );
         _trail.colorGradient = grad;
 
-        // 6) Kameraya hizalı çizgi (daha temiz görünür)
+        // Kameraya hizalı çizgi daha temiz görünür
         _trail.alignment = LineAlignment.View;
 
-        // 7) Hemen temizleyip emit'i aç, böylece hareketin başında eksik iz kalmasın
+        // Trail'i temizle ve yeniden başlat
         _trail.Clear();
         _trail.emitting = false;
         _trail.emitting = true;

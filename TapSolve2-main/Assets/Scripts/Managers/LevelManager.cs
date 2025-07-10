@@ -35,7 +35,6 @@ public class LevelManager : MonoBehaviour
 
         _currentIndex = index % levels.Length;
 
-        // Mevcut level prefab'ýný yok et
         DestroyCurrentLevel();
 
         // Mevcut küpleri temizle
@@ -44,10 +43,8 @@ public class LevelManager : MonoBehaviour
         // Yeni level yaratmak için ortak metodu kullan
         CreateNewLevel();
 
-        // Event'i son olarak fire et
         EventManager.RaiseLevelNumberChanged(_displayedLevelNumber);
 
-        // Kaydet
         SaveProgress();
     }
 
@@ -59,10 +56,8 @@ public class LevelManager : MonoBehaviour
             _levelView.ClearSavedCubes();
         }
 
-        // Mevcut level'i yok et
         DestroyCurrentLevel();
 
-        // Küpleri temizle
         CubeFactory.Instance.ClearAllCubes();
 
         // Yeni level yarat
