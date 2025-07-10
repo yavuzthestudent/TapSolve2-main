@@ -72,6 +72,11 @@ public class UIManager : MonoBehaviour
         _replayButton.SetActive(true);
 
         GameManager.Instance.RestartLevel();
+        if(GameManager.Instance == null)
+        {
+            Debug.LogError("GameManager instance is null!");
+            return;
+        }
     }
 
     public void OnNextButtonPressed()

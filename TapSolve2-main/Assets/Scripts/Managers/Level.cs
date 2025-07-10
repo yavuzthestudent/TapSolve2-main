@@ -1,7 +1,6 @@
-using NUnit.Framework;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq; // Needed for LINQ queries
 
 public class Level : MonoBehaviour
 {
@@ -9,12 +8,15 @@ public class Level : MonoBehaviour
     [SerializeField] private float _cellSize = 1f;
 
     [Header("Level Settings")]
-    private LevelData _currentLevelData;
+    public LevelData _currentLevelData;
     private int _remainingMoves;
-    private int _remainingCubes;
 
-    private List<Vector2Int> _remainingCubesPositions = new List<Vector2Int>();
-    private const string PrefsKeyRemainingCubes = "SavedRemainingCubes";
+    // We now store the full data for each remaining cube, not just their positions.
+    // This list is our "single source of truth" for the level's state.
+    private List<CubeData> _activeCubesData = new List<CubeData>();
+    private const string PrefsKeySavedLevelState = "SavedLevelState";
+
+    // Singleton pattern kaldýrýldý - LevelManager zaten instance'larý yönetiyor
 
     private void OnEnable()
     {
@@ -30,96 +32,127 @@ public class Level : MonoBehaviour
 
     public void LoadLevel(LevelData levelData)
     {
-        ClearExistingCubes(); // Önceki küpleri temizle
-        _currentLevelData = levelData; // Yeni seviye verisini ata
+        ClearExistingCubes();
+        _currentLevelData = levelData;
 
-        // Kayýtlý küp pozisyonlarýný yükle daha önce oynanmýþsa
-        LoadRemainingCubes();
+        // Try to load a saved game state.
+        LoadGameState();
 
-        // Eðer kayýtlý veri varsa ve tüm küpler silinmemiþse devam edilen oyun
-        bool hasProgress = _remainingCubesPositions.Count > 0 &&
-                          _remainingCubesPositions.Count < levelData.Cubes.Count;
+        bool hasProgress = _activeCubesData.Count > 0 &&
+                           _activeCubesData.Count < levelData.Cubes.Count;
 
-        // Kayýtlý pozisyon yoksa, tüm küpleri baþtan ekle yeni oyun aç
-        if (_remainingCubesPositions.Count == 0)
+        // If no saved state was found, initialize from the level data.
+        if (_activeCubesData.Count == 0)
         {
+            // Deep copy to avoid modifying the original LevelData ScriptableObject
             foreach (var cube in levelData.Cubes)
             {
-                _remainingCubesPositions.Add(cube.GridPosition);
-            }
-            SaveRemainingCubes(); // Tüm küpleri kaydet
-        }
-
-        _remainingMoves = levelData.moveLimit; // Hamle sýnýrýný ayarla
-        _remainingCubes = _remainingCubesPositions.Count; // Kalan küp sayýsýný güncelle
-
-        // Event'ler ile UI'yý güncelle
-        if (hasProgress) EventManager.RaiseExistingProgress(); // Kayýtlý oyun varsa aboneleri bilgilendir
-        EventManager.RaiseMoveChanged(_remainingMoves); // Hamle sayýsýný güncelle
-
-        SpawnRemainingCubes(); // Sadece kalan küpleri oluþtur
-    }
-
-    private void LoadRemainingCubes()
-    {
-        _remainingCubesPositions.Clear(); // Önce listeyi temizle
-
-        // PlayerPrefs'te kayýt varsa oku
-        if (PlayerPrefs.HasKey(PrefsKeyRemainingCubes))
-        {
-            string savedPositions = PlayerPrefs.GetString(PrefsKeyRemainingCubes);
-            if (!string.IsNullOrEmpty(savedPositions))
-            {
-                // Format: "x1,y1;x2,y2;x3,y3..."
-                string[] positions = savedPositions.Split(';');
-
-                foreach (string pos in positions)
+                _activeCubesData.Add(new CubeData
                 {
-                    string[] coords = pos.Split(',');
-                    if (coords.Length == 2) // Geçerli bir pozisyon mu?
-                    {
-                        int x = int.Parse(coords[0]);
-                        int y = int.Parse(coords[1]);
-                        _remainingCubesPositions.Add(new Vector2Int(x, y)); // Listeye ekle
-                    }
-                }
+                    GridPosition = cube.GridPosition,
+                    Direction = cube.Direction,
+                    LastPosition = new Vector2Int(-1, -1) // Ensure it starts as "not set"
+                });
             }
+            SaveGameState(); // Save the initial state
         }
-    }
 
-    private void SaveRemainingCubes()
-    {
-        List<string> positions = new List<string>();
+        _remainingMoves = levelData.moveLimit;
 
-        // Tüm kalan küplerin pozisyonlarýný "x,y" formatýnda kaydet
-        foreach (Vector2Int pos in _remainingCubesPositions)
+        if (hasProgress)
         {
-            positions.Add($"{pos.x},{pos.y}");
+            EventManager.RaiseExistingProgress();
         }
+        EventManager.RaiseMoveChanged(_remainingMoves);
 
-        // Örnek kayýt: "2,3;5,1;4,2" (3 küpün pozisyonu)
-        PlayerPrefs.SetString(PrefsKeyRemainingCubes, string.Join(";", positions));
-        PlayerPrefs.Save(); // Diske yaz
+        SpawnCubesFromState(); // Spawn cubes based on the loaded state
     }
 
-    private void SpawnRemainingCubes()
+    private void LoadGameState()
+    {
+        _activeCubesData.Clear();
+        if (!PlayerPrefs.HasKey(PrefsKeySavedLevelState)) return;
+
+        string json = PlayerPrefs.GetString(PrefsKeySavedLevelState);
+        if (string.IsNullOrEmpty(json)) return;
+
+        // Deserialize the list of cube data from JSON
+        var savedData = JsonUtility.FromJson<CubeDataListWrapper>(json);
+        if (savedData != null && savedData.Cubes != null)
+        {
+            _activeCubesData = savedData.Cubes;
+        }
+    }
+
+    public void SaveGameState()
+    {
+        var wrapper = new CubeDataListWrapper { Cubes = _activeCubesData };
+        string json = JsonUtility.ToJson(wrapper);
+        PlayerPrefs.SetString(PrefsKeySavedLevelState, json);
+        PlayerPrefs.Save();
+    }
+
+    // This is the core of your request!
+    private void SpawnCubesFromState()
     {
         float offsetX = -((_currentLevelData.columns - 1) * 0.5f * _cellSize);
         float offsetY = -((_currentLevelData.rows - 1) * 0.5f * _cellSize);
 
-        // Sadece kalan küpleri spawn et
-        foreach (var cubeData in _currentLevelData.Cubes)
+        foreach (var cubeData in _activeCubesData)
         {
-            if (_remainingCubesPositions.Contains(cubeData.GridPosition))
-            {
-                Vector3 worldPos = new Vector3(
-                    offsetX + cubeData.GridPosition.x * _cellSize,
-                    offsetY + cubeData.GridPosition.y * _cellSize,
-                    14f);
+            Vector2Int spawnGridPos = cubeData.LastPosition.x != -1
+                ? cubeData.LastPosition
+                : cubeData.GridPosition;
 
-                CubeFactory.Instance.SpawnCube(cubeData, worldPos);
-            }
+            Vector3 worldPos = new Vector3(
+                offsetX + spawnGridPos.x * _cellSize,
+                offsetY + spawnGridPos.y * _cellSize,
+                14f
+            );
+
+            var cube = CubeFactory.Instance.SpawnCube(cubeData, worldPos,this);
+            // cube.Initialize(data, level) ile data referansýný ve level referansýný ata
+            cube.Initialize(cubeData, this);
         }
+
+    }
+
+    private void HandleCubeCleared(CubeController cube)
+    {
+        // Find and remove the cube from our active list using its unique GridPosition
+        CubeData dataToRemove = _activeCubesData.FirstOrDefault(d => d.GridPosition == cube.GetCubeData().GridPosition);
+        if (dataToRemove != null)
+        {
+            _activeCubesData.Remove(dataToRemove);
+            SaveGameState(); // Save the new state after a cube is cleared
+        }
+
+        if (_activeCubesData.Count <= 0)
+        {
+            EventManager.RaiseLevelComplete();
+            ClearSavedCubes(); // Level complete, clear the save
+        }
+    }
+
+    public void UseMove()
+    {
+        _remainingMoves--;
+        EventManager.RaiseMoveChanged(_remainingMoves);
+
+        // It's good practice to save progress after every move.
+        SaveGameState();
+
+        if (_remainingMoves <= 0)
+        {
+            EventManager.RaiseLevelFail();
+        }
+    }
+
+    public void ClearSavedCubes()
+    {
+        PlayerPrefs.DeleteKey(PrefsKeySavedLevelState);
+        PlayerPrefs.Save();
+        _activeCubesData.Clear();
     }
 
     private void ClearExistingCubes()
@@ -127,39 +160,8 @@ public class Level : MonoBehaviour
         CubeFactory.Instance.ClearAllCubes();
     }
 
-    public void UseMove()
+    private class CubeDataListWrapper
     {
-        _remainingMoves--;
-
-        if (_remainingMoves <= 0)
-        {
-            EventManager.RaiseMoveChanged(0);
-            EventManager.RaiseLevelFail();
-        }
-        else
-        {
-            EventManager.RaiseMoveChanged(_remainingMoves);
-        }
-    }
-
-    private void HandleCubeCleared(CubeController cube)
-    {
-        Vector2Int gridPos = cube.GetCubeData().GridPosition;
-        _remainingCubesPositions.Remove(gridPos);
-        SaveRemainingCubes();
-
-        _remainingCubes--;
-        if (_remainingCubes <= 0)
-        {
-            EventManager.RaiseLevelComplete();
-            // Level tamamlandý, kaydý temizle
-            PlayerPrefs.DeleteKey(PrefsKeyRemainingCubes);
-        }
-    }
-    public void ClearSavedCubes()
-    {
-        PlayerPrefs.DeleteKey(PrefsKeyRemainingCubes);
-        PlayerPrefs.Save();
-        _remainingCubesPositions.Clear();
+        public List<CubeData> Cubes;
     }
 }

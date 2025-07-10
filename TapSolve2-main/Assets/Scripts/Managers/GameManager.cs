@@ -8,8 +8,11 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log("calisti");
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        { 
+            Destroy(gameObject);
+            return; 
+        }
         Instance = this;
     }
 

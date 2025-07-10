@@ -190,7 +190,8 @@ public class LevelEditorWindow : EditorWindow
                 {
                     Direction = _gridDirs[x, y],
                 };
-                CubeFactory.Instance.SpawnCube(data, wp);
+                Level currenLevel = FindFirstObjectByType<Level>();
+                CubeFactory.Instance.SpawnCube(data, wp, currenLevel);
             }
     }
 }

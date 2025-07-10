@@ -24,11 +24,11 @@ public class CubeFactory : MonoBehaviour
         _cubePool = new CubePool(_cubePrefab, _initialSize);
     }
 
-    public CubeController SpawnCube(CubeData data, Vector3 worldPosition)
+    public CubeController SpawnCube(CubeData data, Vector3 worldPosition, Level levelRef)
     {
-        GameObject go = _cubePool.Get();// Obje havuzdan (veya instantiate ile) alýnýyor
+        GameObject go = _cubePool.Get(); // Obje havuzdan (veya instantiate ile) alýnýyor
 
-        if(go == null)
+        if (go == null)
         {
             Debug.LogError("Cube prefab is not assigned in CubeFactory.");
             return null;
@@ -36,7 +36,7 @@ public class CubeFactory : MonoBehaviour
 
         var controller = go.GetComponent<CubeController>();
 
-        if(controller == null)
+        if (controller == null)
         {
             Debug.LogError("CubeController component is missing on the cube prefab.");
             return null;
@@ -45,7 +45,7 @@ public class CubeFactory : MonoBehaviour
         go.transform.position = worldPosition;
 
         controller.ResetState();
-        controller.Initialize(data);
+        controller.Initialize(data, levelRef); // Level parametresi eklendi
 
         go.SetActive(true);
 
