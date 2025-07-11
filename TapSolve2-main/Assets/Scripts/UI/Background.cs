@@ -10,7 +10,7 @@ public class Background : MonoBehaviour
     {
         _currentPositionY += _speed;
 
-        this.gameObject.transform.position = new Vector3 (0, _currentPositionY, 0);
+        this.gameObject.transform.position = new Vector3 (transform.position.x, _currentPositionY, 0);
 
         if(_currentPositionY > _maxY)
         {

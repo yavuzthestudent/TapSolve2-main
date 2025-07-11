@@ -9,7 +9,7 @@ public class CubeController : MonoBehaviour, IClickable
     [SerializeField] private TrailRenderer _trail;
     [SerializeField] private Transform _arrowTransform;
 
-    [SerializeField] private float _moveDistance = 1f;
+    [SerializeField] private float _moveDistance = 1.5f;    // Hücre boyutu 1.5 olarak hardcode
     [SerializeField] private float _moveSpeed = 1f;
     [SerializeField] private float _flashDuration = 0.15f;
 
@@ -21,7 +21,6 @@ public class CubeController : MonoBehaviour, IClickable
     private Color _originalColor;
 
     private bool _isMoving;
-    private bool _canMove;
 
     private Vector3 _dir;
     private Vector2Int _currentGridPosition;
@@ -29,6 +28,16 @@ public class CubeController : MonoBehaviour, IClickable
 
     // Initialize sırasında level referansını alacağız
     private Level _levelReference;
+
+    // Sabit mesafe değerleri - Cube size 1.5 için
+    private const float CUBE_SIZE = 1.5f;           // Küp boyutu
+    private const float COLLISION_THRESHOLD = 1.6f; // Çarpışma eşiği - küp boyutundan biraz büyük
+    private const float SAFE_MARGIN = 0.05f;        // Küçük güvenli marj
+
+    // Hareket kontrolü için
+    private Vector3 _startPosition;
+    private Vector3 _targetPosition;
+    private bool _collisionDetected = false;
 
     public void Initialize(CubeData data, Level levelRef)
     {
@@ -41,7 +50,6 @@ public class CubeController : MonoBehaviour, IClickable
         _dir = DirectionToVector(_cubeData.Direction);
 
         _originalColor = _meshRenderer.material.color;
-
         ConfigureTrailRenderer(_originalColor);
     }
 
@@ -59,48 +67,118 @@ public class CubeController : MonoBehaviour, IClickable
         // Hamle sayısını azalt
         EventManager.RaiseMoveRequested();
 
-        // Hedef pozisyonu yön vektörü ile hesapla
-        Vector3 targetPos = transform.position + _dir * _moveDistance;
+        // Hedef pozisyonu hesapla
+        _startPosition = transform.position;
+        _targetPosition = _startPosition + _dir * _moveDistance;
+        _collisionDetected = false;
 
         // Hareketi başlat
-        MoveToPosition(targetPos);
+        MoveToPosition();
     }
 
-    private void MoveToPosition(Vector3 target)
+    private void MoveToPosition()
     {
-        // Hareket etmeden önce çarpışma kontrolü yap
-        if (!CheckMovement(transform.position, isPreCheck: true))
-        {
-            return; // Çarpışma tespit edildi, hareket etme
-        }
-
         _isMoving = true;
+
         _moveTween = transform
-            .DOMove(target, _moveSpeed)
+            .DOMove(_targetPosition, _moveSpeed)
             .SetEase(Ease.InOutQuad)
             .OnUpdate(() =>
             {
-                // Hareket sırasında sürekli kontrol et
-                if (!CheckMovement(transform.position, isPreCheck: false))
+                // Çarpışma henüz tespit edilmemişse kontrol et
+                if (!_collisionDetected)
                 {
-                    _isMoving = false;
-                    _moveTween.Kill();
-                    return;
+                    CheckCollisionDuringMovement();
                 }
             })
             .OnComplete(() =>
             {
-                // Hareket tamamlandığında küpü kaldır
-                transform.position = target;
                 _isMoving = false;
-                EventManager.RaiseCubeCleared(this);
-                CubeFactory.Instance.ReleaseCube(this);
+
+                // Eğer çarpışma olmadıysa küpü kaldır
+                if (!_collisionDetected)
+                {
+                    EventManager.RaiseCubeCleared(this);
+                    CubeFactory.Instance.ReleaseCube(this);
+                }
             });
+    }
+
+    private void CheckCollisionDuringMovement()
+    {
+        // Mevcut pozisyondan hedef pozisyona olan mesafeyi hesapla
+        float remainingDistance = Vector3.Distance(transform.position, _targetPosition);
+
+        // Raycast ile önümüzdeki engeli kontrol et
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, _dir, out hit, remainingDistance, _obstacleLayer))
+        {
+            // Kendi collider'ını ignore et
+            if (hit.collider.gameObject == this.gameObject)
+                return;
+
+            var otherController = hit.collider.GetComponent<CubeController>();
+
+            // Çarpışma mesafesi kontrolü
+            if (hit.distance <= COLLISION_THRESHOLD)
+            {
+                _collisionDetected = true;
+
+                // Hareketi durdur
+                _moveTween.Kill();
+
+                // Güvenli pozisyonu hesapla
+                Vector3 safePosition = CalculateSafePosition(hit);
+                transform.position = safePosition;
+
+                // Flash efekti
+                if (otherController != null)
+                    FlashRed(otherController);
+
+                // Pozisyonu kaydet
+                SaveCurrentPosition(safePosition);
+
+                _isMoving = false;
+
+                Debug.Log($"Collision detected! Hit distance: {hit.distance:F3}, Safe position: {safePosition}");
+            }
+        }
+    }
+
+    private Vector3 CalculateSafePosition(RaycastHit hit)
+    {
+        // Çarpışan küpün hemen yanında dur - geri gitme!
+        Vector3 hitCubePosition = hit.collider.transform.position;
+        Vector3 safePosition = hitCubePosition - _dir * (CUBE_SIZE + SAFE_MARGIN);
+
+        // Grid'e hizala (opsiyonel - daha düzenli görünüm için)
+        return SnapToGrid(safePosition);
+    }
+
+    private Vector3 SnapToGrid(Vector3 position)
+    {
+        // Grid hizalaması için küp boyutunun yarısına yuvarla
+        float snapValue = CUBE_SIZE / 2f; // 0.75f
+
+        float snappedX = Mathf.Round(position.x / snapValue) * snapValue;
+        float snappedY = Mathf.Round(position.y / snapValue) * snapValue;
+        float snappedZ = position.z; // Z ekseni değişmez
+
+        return new Vector3(snappedX, snappedY, snappedZ);
+    }
+
+    private void SaveCurrentPosition(Vector3 worldPosition)
+    {
+        Vector2Int gridPos = CalculateGridPosition(worldPosition);
+        _cubeData.LastPosition = gridPos;
+        _cubeLastPosition = gridPos;
+        _levelReference.SaveGameState();
+        Debug.Log($"Position saved: Grid({gridPos.x}, {gridPos.y}) World({worldPosition.x:F2}, {worldPosition.y:F2})");
     }
 
     private Vector2Int CalculateGridPosition(Vector3 worldPos)
     {
-        float cell = 1f;
+        float cell = 1.5f; // Hücre boyutu hardcode
         int cols = _levelReference._currentLevelData.columns;
         int rows = _levelReference._currentLevelData.rows;
 
@@ -112,42 +190,6 @@ public class CubeController : MonoBehaviour, IClickable
         int x = Mathf.RoundToInt((worldPos.x - offsetX) / cell);
         int y = Mathf.RoundToInt((worldPos.y - offsetY) / cell);
         return new Vector2Int(x, y);
-    }
-
-    private bool CheckMovement(Vector3 fromPosition, bool isPreCheck = false)
-    {
-        RaycastHit hit;
-        if (Physics.Raycast(fromPosition, _dir, out hit, _moveDistance, _obstacleLayer))
-        {
-            var otherController = hit.collider.GetComponent<CubeController>();
-
-            // Diğer küp hareket halindeyse çarpışma yok say (sadece hareket sırasında)
-            if (!isPreCheck && otherController != null && otherController._isMoving)
-            {
-                return true;
-            }
-
-            // Çarpışma mesafesi kontrolü - çok yakınsa dur
-            if (hit.distance <= 0.6f && hit.collider.gameObject != this.gameObject)
-            {
-                if (otherController != null)
-                {
-                    FlashRed(otherController);
-                }
-
-                // Sadece gerçek hareket sırasında pozisyon kaydet
-                if (!isPreCheck)
-                {
-                    Vector2Int gridPos = CalculateGridPosition(transform.position);
-                    _cubeData.LastPosition = gridPos;
-                    _levelReference.SaveGameState();
-                    Debug.Log($"Collision distance: {hit.distance}");
-                }
-
-                return false; // Hareket edilemez
-            }
-        }
-        return true; // Hareket edilebilir
     }
 
     private void FlashRed(CubeController other)
@@ -184,6 +226,7 @@ public class CubeController : MonoBehaviour, IClickable
     public void ResetState()
     {
         _isMoving = false;
+        _collisionDetected = false;
         _moveTween?.Kill(); // Aktif tween varsa iptal et
     }
 

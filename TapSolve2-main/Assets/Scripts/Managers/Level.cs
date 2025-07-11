@@ -1,20 +1,25 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq; // LINQ sorgularý için gerekli
+using System.Linq;
 
 public class Level : MonoBehaviour
 {
     [Header("Grid Settings")]
-    [SerializeField] private float _cellSize = 1f;
+    [SerializeField] private float _cellSize = 5f;
+    [SerializeField] private float _gridZ = 14f;
+    [SerializeField] private bool _useResponsiveScaling = true;
 
     [Header("Level Settings")]
     public LevelData _currentLevelData;
     private int _remainingMoves;
 
-    // Aktif küplerin tüm bilgilerini saklýyoruz, sadece pozisyon deðil
-    // Bu liste level durumunun tek kaynaðý olacak
     private List<CubeData> _activeCubesData = new List<CubeData>();
     private const string PrefsKeySavedLevelState = "SavedLevelState";
+    private const string PrefsKeySavedRemainingMoves = "SavedRemainingMoves";
+
+    private float _currentCellSize;
+    private Vector3 _gridWorldCenter;
+    private Bounds _viewportBounds;
 
     private void OnEnable()
     {
@@ -33,14 +38,12 @@ public class Level : MonoBehaviour
         ClearExistingCubes();
         _currentLevelData = levelData;
 
-        // Kaydedilmiþ oyun durumunu yüklemeye çalýþ
+        CalculateResponsiveLayout();
         LoadGameState();
 
-        // Eðer küp sayýsý 0'dan fazla ama toplam küp sayýsýndan azsa ilerleme var ilerde yükleme için kullan
         bool hasProgress = _activeCubesData.Count > 0 &&
                            _activeCubesData.Count < levelData.Cubes.Count;
 
-        // Eðer kaydedilmiþ durum bulunamazsa, level verisinden baþlat
         if (_activeCubesData.Count == 0)
         {
             foreach (var cube in levelData.Cubes)
@@ -49,13 +52,16 @@ public class Level : MonoBehaviour
                 {
                     GridPosition = cube.GridPosition,
                     Direction = cube.Direction,
-                    LastPosition = new Vector2Int(-1, -1) // Baþlangýçta ayarlanmamýþ olarak iþaretle
+                    LastPosition = new Vector2Int(-1, -1)
                 });
             }
-            SaveGameState(); // Ýlk durumu kaydet
+            _remainingMoves = levelData.moveLimit;
+            SaveGameState();
         }
-
-        _remainingMoves = levelData.moveLimit;
+        else
+        {
+            _remainingMoves = PlayerPrefs.GetInt(PrefsKeySavedRemainingMoves, levelData.moveLimit);
+        }
 
         if (hasProgress)
         {
@@ -63,7 +69,47 @@ public class Level : MonoBehaviour
         }
         EventManager.RaiseMoveChanged(_remainingMoves);
 
-        SpawnCubesFromState(); // Yüklenen duruma göre küpleri spawn et
+        SpawnCubesFromState();
+    }
+
+    private void CalculateResponsiveLayout()
+    {
+        if (!_useResponsiveScaling || _currentLevelData == null)
+        {
+            _currentCellSize = _cellSize;
+            _gridWorldCenter = Vector3.zero;
+            return;
+        }
+
+        CalculateViewportBounds();
+
+        // Sadece ekrana ortalama - hiç boþluk býrakmama
+        _currentCellSize = _cellSize;
+
+        // Grid merkezini hesapla - sadece ekranýn tam ortasý
+        _gridWorldCenter = new Vector3(
+            _viewportBounds.center.x,
+            _viewportBounds.center.y,
+            _gridZ
+        );
+
+        Debug.Log($"[Level] CellSize: {_currentCellSize}, GridCenter: {_gridWorldCenter}");
+    }
+
+    private void CalculateViewportBounds()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        float distance = Mathf.Abs(cam.transform.position.z - _gridZ);
+
+        Vector3 bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, distance));
+        Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, distance));
+
+        _viewportBounds = new Bounds(
+            (bottomLeft + topRight) * 0.5f,
+            topRight - bottomLeft
+        );
     }
 
     private void LoadGameState()
@@ -74,7 +120,6 @@ public class Level : MonoBehaviour
         string json = PlayerPrefs.GetString(PrefsKeySavedLevelState);
         if (string.IsNullOrEmpty(json)) return;
 
-        // Küp verilerini JSON'dan küp bilgisine açýlýyor.
         var savedData = JsonUtility.FromJson<CubeDataListWrapper>(json);
         if (savedData != null && savedData.Cubes != null)
         {
@@ -84,56 +129,103 @@ public class Level : MonoBehaviour
 
     public void SaveGameState()
     {
-        //Aktif olan küpler CubeDataListWrapper sýnýfý sayesinde json'a sarýlýyor(?)
         var wrapper = new CubeDataListWrapper { Cubes = _activeCubesData };
         string json = JsonUtility.ToJson(wrapper);
         PlayerPrefs.SetString(PrefsKeySavedLevelState, json);
+
+        PlayerPrefs.SetInt(PrefsKeySavedRemainingMoves, _remainingMoves);
         PlayerPrefs.Save();
     }
 
     private void SpawnCubesFromState()
     {
-        // Grid'i ortalamak için offset hesapla
-        float offsetX = -((_currentLevelData.columns - 1) * 0.5f * _cellSize);
-        float offsetY = -((_currentLevelData.rows - 1) * 0.5f * _cellSize);
-
         foreach (var cubeData in _activeCubesData)
         {
-            // Eðer LastPosition ayarlanmýþsa oradan spawn et, yoksa orijinal pozisyondan
             Vector2Int spawnGridPos = cubeData.LastPosition.x != -1
                 ? cubeData.LastPosition
                 : cubeData.GridPosition;
 
-            // Grid pozisyonunu dünya koordinatýna çevir
-            Vector3 worldPos = new Vector3(
-                offsetX + spawnGridPos.x * _cellSize,
-                offsetY + spawnGridPos.y * _cellSize,
-                14f
-            );
+            Vector3 worldPos = GridToWorldPosition(spawnGridPos);
 
             var cube = CubeFactory.Instance.SpawnCube(cubeData, worldPos, this);
-            // Küpü data referansý ve level referansý ile initialize et
             cube.Initialize(cubeData, this);
         }
     }
 
+    private Vector3 GridToWorldPosition(Vector2Int gridPos)
+    {
+        // Grid'i tamamen ortalama - hiç boþluk yok
+        float offsetX = -((_currentLevelData.columns - 1) * 0.5f * _currentCellSize);
+        float offsetY = -((_currentLevelData.rows - 1) * 0.5f * _currentCellSize);
+
+        Vector3 localPos = new Vector3(
+            offsetX + gridPos.x * _currentCellSize,
+            offsetY + gridPos.y * _currentCellSize,
+            0
+        );
+
+        return _gridWorldCenter + localPos;
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        if (_currentLevelData != null)
+        {
+            CalculateResponsiveLayout();
+            UpdateCubePositions();
+        }
+    }
+
+    private void UpdateCubePositions()
+    {
+        var allCubes = FindObjectsOfType<CubeController>();
+        foreach (var cube in allCubes)
+        {
+            var cubeData = cube.GetCubeData();
+            Vector2Int currentGridPos = cubeData.LastPosition.x != -1
+                ? cubeData.LastPosition
+                : cubeData.GridPosition;
+
+            Vector3 newWorldPos = GridToWorldPosition(currentGridPos);
+            cube.transform.position = newWorldPos;
+        }
+    }
+
+    public Vector3 GetGridWorldCenter() => _gridWorldCenter;
+    public float GetCurrentCellSize() => _currentCellSize;
+    public Bounds GetViewportBounds() => _viewportBounds;
+
+    public Vector3 GetWorldPositionFromGrid(Vector2Int gridPos)
+    {
+        return GridToWorldPosition(gridPos);
+    }
+
+    public Vector2Int GetGridPositionFromWorld(Vector3 worldPos)
+    {
+        Vector3 localPos = worldPos - _gridWorldCenter;
+
+        float offsetX = -((_currentLevelData.columns - 1) * 0.5f * _currentCellSize);
+        float offsetY = -((_currentLevelData.rows - 1) * 0.5f * _currentCellSize);
+
+        int gridX = Mathf.RoundToInt((localPos.x - offsetX) / _currentCellSize);
+        int gridY = Mathf.RoundToInt((localPos.y - offsetY) / _currentCellSize);
+
+        return new Vector2Int(gridX, gridY);
+    }
+
     private void HandleCubeCleared(CubeController cube)
     {
-        // FirstOrDefault ile GridPosition'a göre eþleþen ilk elemaný bul, gönderilen Cube bilgisi üzerinden temizleyeceðiz
-        //foreach ile tüm küpleri dolaþmak yerine LINQ kullanarak daha verimli bir þekilde bulduk
-        //foreach ve if yapýsý da kullanýlabilirdi
         CubeData dataToRemove = _activeCubesData.FirstOrDefault(d => d.GridPosition == cube.GetCubeData().GridPosition);
         if (dataToRemove != null)
         {
             _activeCubesData.Remove(dataToRemove);
-            SaveGameState(); // Küp temizlendikten sonra yeni durumu kaydet
+            SaveGameState();
         }
 
-        // Tüm küpler bittiyse level tamamlandý
         if (_activeCubesData.Count <= 0)
         {
             EventManager.RaiseLevelComplete();
-            ClearSavedCubes(); // Level tamamlandý, kayýtlarý temizle
+            ClearSavedCubes();
         }
     }
 
@@ -141,13 +233,11 @@ public class Level : MonoBehaviour
     {
         _remainingMoves--;
         EventManager.RaiseMoveChanged(_remainingMoves);
-
-        // Her hamleden sonra ilerlemeyi kaydetmek için
         SaveGameState();
 
         if (_remainingMoves <= 0)
         {
-            _remainingMoves = 0; // Negatif deðere düþmeyi önle, son güncellemede sorun çýkarýyordu
+            _remainingMoves = 0;
             EventManager.RaiseLevelFail();
         }
     }
@@ -162,6 +252,37 @@ public class Level : MonoBehaviour
     private void ClearExistingCubes()
     {
         CubeFactory.Instance.ClearAllCubes();
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (_currentLevelData == null) return;
+
+        // Grid merkezi
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(_gridWorldCenter, 0.2f);
+
+        // Viewport sýnýrlarý
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(_viewportBounds.center, _viewportBounds.size);
+
+        // Grid sýnýrlarý
+        Gizmos.color = Color.red;
+        float gridWidth = _currentLevelData.columns * _currentCellSize;
+        float gridHeight = _currentLevelData.rows * _currentCellSize;
+        Vector3 gridSize = new Vector3(gridWidth, gridHeight, 0.1f);
+        Gizmos.DrawWireCube(_gridWorldCenter, gridSize);
+
+        // Grid hücreleri
+        Gizmos.color = Color.green;
+        for (int x = 0; x < _currentLevelData.columns; x++)
+        {
+            for (int y = 0; y < _currentLevelData.rows; y++)
+            {
+                Vector3 cellPos = GridToWorldPosition(new Vector2Int(x, y));
+                Gizmos.DrawWireCube(cellPos, Vector3.one * _currentCellSize);
+            }
+        }
     }
 
     private class CubeDataListWrapper

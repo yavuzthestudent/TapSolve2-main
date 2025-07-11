@@ -44,4 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62e0c6cb36ae1ca46b9820e65a5ff2b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cellSize: 1
+  _cellSize: 1.5
+  _gridZ: 14
+  _useResponsiveScaling: 1
+  _currentLevelData: {fileID: 0}
